@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* React Big Calendar custom styles */
+.rbc-calendar {
+  @apply bg-white rounded-lg;
+}
+
+.rbc-toolbar {
+  @apply mb-4 p-4 bg-gray-50 rounded-lg;
+}
+
+.rbc-toolbar button {
+  @apply px-3 py-2 mx-1 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors;
+}
+
+.rbc-toolbar button.rbc-active {
+  @apply bg-primary-500 text-white border-primary-500;
+}
+
+.rbc-month-view {
+  @apply border border-gray-200 rounded-lg;
+}
+
+.rbc-header {
+  @apply p-3 bg-gray-50 border-b border-gray-200 font-semibold text-gray-700;
+}
+
+.rbc-date-cell {
+  @apply p-2 border-b border-gray-100;
+}
+
+.rbc-event {
+  @apply bg-primary-500 border-primary-600 rounded-md px-2 py-1 text-white text-sm;
+}
+
+.rbc-event:hover {
+  @apply bg-primary-600;
+}
+
+/* Drag and drop styles */
+.vault-item {
+  @apply cursor-move transition-transform hover:scale-105;
+}
+
+.vault-item.dragging {
+  @apply opacity-50 scale-95;
+}
+
+/* Upload area styles */
+.upload-zone {
+  @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors;
+}
+
+.upload-zone.dragover {
+  @apply border-primary-500 bg-primary-50;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .rbc-toolbar {
+    @apply flex-col space-y-2;
+  }
+  
+  .rbc-toolbar-label {
+    @apply text-lg font-semibold;
+  }
+}
+@import "react-big-calendar/lib/css/react-big-calendar.css";

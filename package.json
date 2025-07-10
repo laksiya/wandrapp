@@ -1,0 +1,40 @@
+{
+  "name": "travel-workspace-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.7.0",
+    "@neondatabase/serverless": "^0.9.0",
+    "dnd-core": "^16.0.1",
+    "formidable": "^3.5.1",
+    "moment": "^2.29.4",
+    "next": "^15.0.0",
+    "openai": "^4.20.1",
+    "react": "^18.2.0",
+    "react-big-calendar": "^1.8.5",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/formidable": "^3.4.5",
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.0",
+    "@types/react-big-calendar": "^1.16.2",
+    "@types/react-dom": "^18.2.0",
+    "@types/uuid": "^9.0.7",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.51.0",
+    "eslint-config-next": "^15.0.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2"
+  }
+}
