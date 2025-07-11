@@ -3,6 +3,8 @@
 import { useDrag } from 'react-dnd'
 import { VaultItem } from '@/lib/db'
 import Image from 'next/image'
+import { useState, useEffect } from 'react'
+import { getImageFromGCS } from '@/app/trip/[tripId]/actions'
 
 interface VaultListProps {
   items: VaultItem[]
@@ -21,6 +23,40 @@ function VaultItemCard({ item }: VaultItemCardProps) {
     }),
   }))
 
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!item.image_url) return
+      
+      setIsLoading(true)
+      try {
+        // If it's a GCS URL, use getImageFromGCS
+        if (item.image_url.includes('storage.googleapis.com')) {
+          const gcsImage = await getImageFromGCS(item.image_url)
+          if (gcsImage) {
+            setImageSrc(gcsImage)
+          } else {
+            // Fallback to original URL if GCS download fails
+            setImageSrc(item.image_url)
+          }
+        } else {
+          // For local images, use the URL directly
+          setImageSrc(item.image_url)
+        }
+      } catch (error) {
+        console.error('Failed to load image:', error)
+        // Fallback to original URL
+        setImageSrc(item.image_url)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadImage()
+  }, [item.image_url])
+
   return (
     <div
       ref={drag as any}
@@ -31,13 +67,21 @@ function VaultItemCard({ item }: VaultItemCardProps) {
       <div className="flex items-start space-x-3">
         {item.image_url && (
           <div className="flex-shrink-0">
-            <Image
-              src={item.image_url}
-              alt={item.name}
-              width={60}
-              height={60}
-              className="rounded-md object-cover"
-            />
+            {isLoading ? (
+              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
+            ) : imageSrc ? (
+              <Image
+                src={imageSrc}
+                alt={item.name}
+                width={60}
+                height={60}
+                className="rounded-md object-cover"
+              />
+            ) : (
+              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md flex items-center justify-center">
+                <span className="text-gray-400 text-xs">Error</span>
+              </div>
+            )}
           </div>
         )}
         <div className="flex-1 min-w-0">

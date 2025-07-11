@@ -263,3 +263,32 @@ export async function getTrip(tripId: string) {
     return null
   }
 }
+
+export async function getImageFromGCS(imageUrl: string): Promise<string | null> {
+  try {
+    if (!storage || !imageUrl.includes('storage.googleapis.com')) {
+      return null;
+    }
+
+    // Extract bucket name and file path from GCS URL
+    const url = new URL(imageUrl);
+    const pathParts = url.pathname.split('/');
+    const bucketName = pathParts[1];
+    const fileName = pathParts.slice(2).join('/');
+
+    const bucket = storage.bucket(bucketName);
+    const file = bucket.file(fileName);
+
+    // Download the file as a buffer
+    const [buffer] = await file.download();
+
+    // Convert to base64 data URL
+    const base64 = buffer.toString('base64');
+    const contentType = file.metadata?.contentType || 'image/jpeg';
+
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Failed to download image from GCS:', error);
+    return null;
+  }
+}
