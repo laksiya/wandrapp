@@ -11,18 +11,38 @@ import { v4 as uuidv4 } from 'uuid'
 // Initialize Google Cloud Storage (for production)
 let storage: Storage | null = null
 try {
-  if (process.env.GCP_SERVICE_KEY && process.env.GCP_PROJECT_ID) {
-    const serviceKey = typeof process.env.GCP_SERVICE_KEY === 'string' 
-      ? JSON.parse(process.env.GCP_SERVICE_KEY)
-      : process.env.GCP_SERVICE_KEY
+  console.log('GCP_SERVICE_KEY length:', process.env.GCP_SERVICE_KEY?.length)
+  console.log('GCP_SERVICE_KEY first 100 chars:', process.env.GCP_SERVICE_KEY?.substring(0, 100))
+  
+  if (process.env.GCP_SERVICE_KEY) {
+    let serviceKey: any
+    
+    // Handle different formats of the service key
+    if (process.env.GCP_SERVICE_KEY.startsWith('{')) {
+      // It's already a JSON string
+      serviceKey = JSON.parse(process.env.GCP_SERVICE_KEY)
+    } else {
+      // It might be base64 encoded or have escaped quotes
+      try {
+        // Try to decode if it's base64
+        const decoded = Buffer.from(process.env.GCP_SERVICE_KEY, 'base64').toString()
+        serviceKey = JSON.parse(decoded)
+      } catch {
+        // If that fails, try to parse as-is
+        serviceKey = JSON.parse(process.env.GCP_SERVICE_KEY)
+      }
+    }
+
+    console.log('Parsed service key project_id:', serviceKey.project_id)
 
     storage = new Storage({
-      projectId: process.env.GCP_PROJECT_ID,
+      projectId: serviceKey.project_id,
       credentials: serviceKey,
     })
   }
 } catch (error) {
   console.log('GCP Storage not configured, using local storage for development')
+  console.log('Error details:', error)
 }
 
 export async function uploadScreenshot(formData: FormData) {
@@ -37,6 +57,9 @@ export async function uploadScreenshot(formData: FormData) {
     // Convert file to buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
+
+    // Parse image with OpenAI Vision using the file buffer directly
+    const parsed = await parseScreenshot(file)
 
     let imageUrl: string
 
@@ -66,9 +89,6 @@ export async function uploadScreenshot(formData: FormData) {
       
       imageUrl = `/uploads/${fileName}`
     }
-
-    // Parse image with OpenAI Vision
-    const parsed = await parseScreenshot(imageUrl)
 
     // Save to database
     await sql`

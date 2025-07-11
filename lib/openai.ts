@@ -14,8 +14,21 @@ export interface ParsedActivity {
   activityType: string;
 }
 
-export async function parseScreenshot(imageUrl: string): Promise<ParsedActivity> {
+export async function parseScreenshot(imageInput: string | File): Promise<ParsedActivity> {
   try {
+    let imageUrl: string;
+    
+    if (typeof imageInput === 'string') {
+      // If it's already a URL string, use it directly
+      imageUrl = imageInput;
+    } else {
+      // If it's a File object, convert to base64 data URL
+      const bytes = await imageInput.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const base64 = buffer.toString('base64');
+      imageUrl = `data:${imageInput.type};base64,${base64}`;
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
