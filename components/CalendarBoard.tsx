@@ -6,7 +6,7 @@ import moment from 'moment'
 import { useDrop } from 'react-dnd'
 import { ItineraryItem, VaultItem } from '@/lib/db'
 import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[tripId]/actions'
-import { useTransition } from 'react'
+import { useTransition, useState } from 'react'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -29,6 +29,7 @@ interface CalendarEvent {
 
 export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate }: CalendarBoardProps) {
   const [isPending, startTransition] = useTransition()
+  const [dragItem, setDragItem] = useState<any>(null)
 
   // Calculate default date based on trip start date or current date
   const getDefaultDate = () => {
@@ -40,21 +41,22 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'vaultItem',
+    hover: (item: { id: string; name: string; vaultItem: VaultItem }, monitor) => {
+      // Set the drag item when hovering over the calendar
+      if (!dragItem) {
+        setDragItem({
+          id: item.id,
+          title: item.name,
+          start: new Date(),
+          end: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours duration
+          vaultItem: item.vaultItem
+        })
+      }
+    },
     drop: (item: { id: string; name: string; vaultItem: VaultItem }, monitor) => {
       if (!monitor.didDrop()) {
-        // Use trip start date if available, otherwise use current date
-        const baseDate = tripStartDate ? new Date(tripStartDate) : new Date()
-        const start = new Date(baseDate.getTime() + Math.random() * 2 * 24 * 60 * 60 * 1000) // Random time within 2 days of start
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000) // 2 hours duration
-        
-        startTransition(async () => {
-          try {
-            await addToItinerary(item.id, start.toISOString(), end.toISOString())
-            onUpdate?.()
-          } catch (error) {
-            console.error('Failed to add to itinerary:', error)
-          }
-        })
+        // This will be handled by onDropFromOutside instead
+        console.log('Drop detected but handled by onDropFromOutside')
       }
     },
     collect: (monitor) => ({
@@ -150,6 +152,23 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           resizable
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
+          dragFromOutsideItem={() => dragItem}
+          onDropFromOutside={({ start, end }) => {
+            if (dragItem) {
+              startTransition(async () => {
+                try {
+                  const startDate = new Date(start)
+                  const endDate = new Date(end)
+                  await addToItinerary(dragItem.id, startDate.toISOString(), endDate.toISOString())
+                  onUpdate?.()
+                  setDragItem(null)
+                } catch (error) {
+                  console.error('Failed to add to itinerary:', error)
+                }
+              })
+            }
+          }}
+          onDragOver={(e) => e.preventDefault()}
           components={{
             event: EventComponent as any,
           }}
