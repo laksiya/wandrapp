@@ -6,6 +6,8 @@ import { createTrip } from '@/app/trip/[tripId]/actions'
 
 export default function CreateTripPage() {
   const [tripName, setTripName] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -17,9 +19,15 @@ export default function CreateTripPage() {
       return
     }
 
+    // Validate dates if provided
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      alert('End date must be after start date')
+      return
+    }
+
     startTransition(async () => {
       try {
-        const result = await createTrip(tripName.trim())
+        const result = await createTrip(tripName.trim(), startDate || undefined, endDate || undefined)
         if (result.success) {
           router.push(`/trip/${result.trip.id}`)
         }
@@ -59,6 +67,35 @@ export default function CreateTripPage() {
                 disabled={isPending}
                 maxLength={100}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  disabled={isPending}
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  End Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  id="endDate"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  disabled={isPending}
+                />
+              </div>
             </div>
 
             <button

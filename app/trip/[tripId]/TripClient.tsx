@@ -88,7 +88,12 @@ export default function TripClient({ tripId }: TripClientProps) {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="min-h-screen bg-gray-50">
-        <Header tripId={tripId} tripName={trip?.name} />
+        <Header 
+          tripId={tripId} 
+          tripName={trip?.name} 
+          tripStartDate={trip?.start_date}
+          tripEndDate={trip?.end_date}
+        />
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -221,12 +221,12 @@ export async function getItineraryItems(tripId: string): Promise<ItineraryItem[]
   })) as ItineraryItem[]
 }
 
-export async function createTrip(name: string) {
+export async function createTrip(name: string, startDate?: string, endDate?: string) {
   try {
     const result = await sql`
-      INSERT INTO trips (name)
-      VALUES (${name})
-      RETURNING id, name, created_at
+      INSERT INTO trips (name, start_date, end_date)
+      VALUES (${name}, ${startDate || null}, ${endDate || null})
+      RETURNING id, name, start_date, end_date, created_at
     `
     
     if (result.length === 0) {
@@ -238,6 +238,8 @@ export async function createTrip(name: string) {
       trip: {
         id: result[0].id,
         name: result[0].name,
+        start_date: result[0].start_date,
+        end_date: result[0].end_date,
         created_at: result[0].created_at
       }
     }

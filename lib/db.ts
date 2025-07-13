@@ -9,6 +9,8 @@ export const sql = neon(process.env.DATABASE_URL);
 export interface Trip {
   id: string;
   name: string;
+  start_date?: string;
+  end_date?: string;
   created_at: string;
   updated_at: string;
 }

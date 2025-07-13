@@ -6,9 +6,11 @@ import Link from 'next/link'
 interface HeaderProps {
   tripId?: string
   tripName?: string
+  tripStartDate?: string
+  tripEndDate?: string
 }
 
-export default function Header({ tripId, tripName }: HeaderProps) {
+export default function Header({ tripId, tripName, tripStartDate, tripEndDate }: HeaderProps) {
   const [showMenu, setShowMenu] = useState(false)
 
   return (
@@ -24,8 +26,23 @@ export default function Header({ tripId, tripName }: HeaderProps) {
             </Link>
             {tripName && (
               <div className="ml-4 pl-4 border-l border-gray-300">
-                <span className="text-gray-600 text-sm">Trip:</span>
-                <span className="ml-1 font-semibold text-gray-900">{tripName}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-600 text-sm">Trip:</span>
+                  <span className="font-semibold text-gray-900">{tripName}</span>
+                </div>
+                {(tripStartDate || tripEndDate) && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {tripStartDate && tripEndDate ? (
+                      <>
+                        {new Date(tripStartDate).toLocaleDateString()} - {new Date(tripEndDate).toLocaleDateString()}
+                      </>
+                    ) : tripStartDate ? (
+                      <>From {new Date(tripStartDate).toLocaleDateString()}</>
+                    ) : tripEndDate ? (
+                      <>Until {new Date(tripEndDate).toLocaleDateString()}</>
+                    ) : null}
+                  </div>
+                )}
               </div>
             )}
           </div>
