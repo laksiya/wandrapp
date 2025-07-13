@@ -1,6 +1,7 @@
 'use client'
 
 import { Calendar, momentLocalizer, View } from 'react-big-calendar'
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import moment from 'moment'
 import { useDrop } from 'react-dnd'
 import { ItineraryItem, VaultItem } from '@/lib/db'
@@ -8,6 +9,7 @@ import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[trip
 import { useTransition } from 'react'
 
 const localizer = momentLocalizer(moment)
+const DnDCalendar = withDragAndDrop(Calendar)
 
 interface CalendarBoardProps {
   tripId: string
@@ -120,17 +122,20 @@ export default function CalendarBoard({ tripId, itineraryItems, onUpdate }: Cale
           isOver ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
         }`}
       >
-        <Calendar
+        <DnDCalendar
           localizer={localizer}
           events={events}
-          startAccessor="start"
-          endAccessor="end"
+          startAccessor={(event: any) => event.start}
+          endAccessor={(event: any) => event.end}
           defaultView="week"
           views={['week', 'day']}
           defaultDate={new Date()}
           selectable
+          resizable
+          onEventDrop={handleEventDrop}
+          onEventResize={handleEventResize}
           components={{
-            event: EventComponent,
+            event: EventComponent as any,
           }}
           style={{ height: '100%', padding: '16px' }}
           min={new Date(2023, 0, 1, 6, 0, 0)} // 6 AM
