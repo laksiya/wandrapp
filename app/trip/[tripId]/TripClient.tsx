@@ -115,6 +115,8 @@ export default function TripClient({ tripId }: TripClientProps) {
                 <CalendarBoard 
                   tripId={tripId}
                   itineraryItems={itineraryItems}
+                  tripStartDate={trip?.start_date}
+                  tripEndDate={trip?.end_date}
                   onUpdate={loadData}
                 />
               </div>

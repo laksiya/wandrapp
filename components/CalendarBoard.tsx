@@ -14,6 +14,8 @@ const DnDCalendar = withDragAndDrop(Calendar)
 interface CalendarBoardProps {
   tripId: string
   itineraryItems: ItineraryItem[]
+  tripStartDate?: string
+  tripEndDate?: string
   onUpdate?: () => void
 }
 
@@ -25,16 +27,24 @@ interface CalendarEvent {
   resource: ItineraryItem
 }
 
-export default function CalendarBoard({ tripId, itineraryItems, onUpdate }: CalendarBoardProps) {
+export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate }: CalendarBoardProps) {
   const [isPending, startTransition] = useTransition()
+
+  // Calculate default date based on trip start date or current date
+  const getDefaultDate = () => {
+    if (tripStartDate) {
+      return new Date(tripStartDate)
+    }
+    return new Date()
+  }
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'vaultItem',
     drop: (item: { id: string; name: string; vaultItem: VaultItem }, monitor) => {
       if (!monitor.didDrop()) {
-        // Default drop behavior - add to next available slot
-        const now = new Date()
-        const start = new Date(now.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000) // Random time in next 3 days
+        // Use trip start date if available, otherwise use current date
+        const baseDate = tripStartDate ? new Date(tripStartDate) : new Date()
+        const start = new Date(baseDate.getTime() + Math.random() * 2 * 24 * 60 * 60 * 1000) // Random time within 2 days of start
         const end = new Date(start.getTime() + 2 * 60 * 60 * 1000) // 2 hours duration
         
         startTransition(async () => {
@@ -112,7 +122,13 @@ export default function CalendarBoard({ tripId, itineraryItems, onUpdate }: Cale
   return (
     <div className="h-full">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        3-Day Itinerary
+        {tripStartDate && tripEndDate ? (
+          <>
+            {new Date(tripStartDate).toLocaleDateString()} - {new Date(tripEndDate).toLocaleDateString()} Itinerary
+          </>
+        ) : (
+          'Trip Itinerary'
+        )}
         {isPending && <span className="ml-2 text-sm text-gray-500">(Updating...)</span>}
       </h3>
       
@@ -129,7 +145,7 @@ export default function CalendarBoard({ tripId, itineraryItems, onUpdate }: Cale
           endAccessor={(event: any) => event.end}
           defaultView="week"
           views={['week', 'day']}
-          defaultDate={new Date()}
+          defaultDate={getDefaultDate()}
           selectable
           resizable
           onEventDrop={handleEventDrop}
