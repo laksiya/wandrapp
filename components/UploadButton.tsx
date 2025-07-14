@@ -15,6 +15,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
   const [mode, setMode] = useState<UploadMode>('select')
   const [isDragOver, setIsDragOver] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   
   // Form state for manual event creation
   const [formData, setFormData] = useState({
@@ -32,14 +33,14 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
       file.name.toLowerCase().endsWith('.heic') ||
       file.name.toLowerCase().endsWith('.heif')
     ) {
-      alert(
+      setErrorMessage(
         'iPhone screenshots are saved as HEIC files, which are not supported by most browsers and AI APIs.\n\nPlease convert your screenshot to JPEG or PNG before uploading. You can use an online converter like https://heic2jpg.com or "Save as JPEG" from the Photos app.'
       )
       return
     }
 
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file')
+      setErrorMessage('Please upload an image file')
       return
     }
 
@@ -54,7 +55,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
         setMode('select')
       } catch (error) {
         console.error('Upload failed:', error)
-        alert('Upload failed. Please try again.')
+        setErrorMessage('Upload failed. Please try again. ' + ((error as any)?.message || ''))
       }
     })
   }
@@ -160,6 +161,19 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
   if (mode === 'screenshot') {
     return (
       <div className="mb-4">
+        {/* Error prompt */}
+        {errorMessage && (
+          <div className="mb-2 px-3 py-2 bg-red-100 border border-red-300 text-red-700 rounded flex items-center justify-between text-xs">
+            <span className="whitespace-pre-line">{errorMessage}</span>
+            <button
+              className="ml-2 text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+              onClick={() => setErrorMessage(null)}
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div
           className={`upload-zone ${isDragOver ? 'dragover' : ''}`}
           onDrop={handleDrop}
