@@ -62,6 +62,24 @@ function VaultItemCard({ item }: VaultItemCardProps) {
 
   const borderHex = getActivityTypeHexColor(validateActivityType(item.activity_type || 'Other'));
 
+  // Function to get placeholder icon based on activity type
+  const getPlaceholderIcon = (activityType: string) => {
+    const icons: Record<string, string> = {
+      'Sightseeing': '🏛️',
+      'Culture': '🎭',
+      'Adventure': '🏔️',
+      'Wellness': '🧘',
+      'Entertainment': '🎪',
+      'Shopping': '🛍️',
+      'Events': '🎉',
+      'Transportation': '🚗',
+      'Accommodations': '🏨',
+      'Food & Drink': '🍽️',
+      'Other': '📍'
+    }
+    return icons[activityType] || '📍'
+  }
+
   return (
     <div
       ref={drag as any}
@@ -69,26 +87,37 @@ function VaultItemCard({ item }: VaultItemCardProps) {
       style={{ borderColor: borderHex }}
     >
       <div className="flex items-start space-x-3">
-        {item.image_url && (
-          <div className="flex-shrink-0">
-            {isLoading ? (
-              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
-            ) : imageSrc && !imageError ? (
-              <Image
-                src={imageSrc}
-                alt={item.name}
-                width={60}
-                height={60}
-                className="rounded-md object-cover"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <div className="w-[60px] h-[60px] bg-gray-100 rounded-md flex items-center justify-center">
-                <span className="text-gray-400 text-2xl">📸</span>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex-shrink-0">
+          {item.image_url ? (
+            // Show actual image if available
+            <>
+              {isLoading ? (
+                <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
+              ) : imageSrc && !imageError ? (
+                <Image
+                  src={imageSrc}
+                  alt={item.name}
+                  width={60}
+                  height={60}
+                  className="rounded-md object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="w-[60px] h-[60px] bg-gray-100 rounded-md flex items-center justify-center">
+                  <span className="text-gray-400 text-2xl">📸</span>
+                </div>
+              )}
+            </>
+          ) : (
+            // Show placeholder when no image is provided
+            <div 
+              className="w-[60px] h-[60px] rounded-md flex items-center justify-center text-2xl"
+              style={{ backgroundColor: `${borderHex}20` }}
+            >
+              {getPlaceholderIcon(item.activity_type || 'Other')}
+            </div>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-gray-900 truncate">
             {item.name}
