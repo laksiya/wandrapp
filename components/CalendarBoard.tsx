@@ -180,37 +180,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     </div>
   )
 
-  // Bulletproof dynamic time gutter alignment
-  useEffect(() => {
-    function alignTimeGutter() {
-      const gutter = document.querySelector('.rbc-time-gutter') as HTMLElement | null
-      const headerGutter = document.querySelector('.rbc-time-header-cell.rbc-time-header-gutter') as HTMLElement | null
-      const headerLabel = document.querySelector('.rbc-time-header > .rbc-label') as HTMLElement | null
-      if (gutter && headerGutter) {
-        headerGutter.style.minWidth = gutter.offsetWidth + 'px'
-        headerGutter.style.width = gutter.offsetWidth + 'px'
-      }
-      if (gutter && headerLabel) {
-        headerLabel.style.minWidth = gutter.offsetWidth + 'px'
-        headerLabel.style.width = gutter.offsetWidth + 'px'
-      }
-    }
-    alignTimeGutter()
-    window.addEventListener('resize', alignTimeGutter)
-    // Observe calendar DOM for changes
-    const calendarRoot = document.querySelector('.rbc-calendar')
-    let observer: MutationObserver | null = null
-    if (calendarRoot) {
-      observer = new MutationObserver(() => {
-        alignTimeGutter()
-      })
-      observer.observe(calendarRoot, { childList: true, subtree: true })
-    }
-    return () => {
-      window.removeEventListener('resize', alignTimeGutter)
-      if (observer) observer.disconnect()
-    }
-  }, [])
+
 
   return (
     <div className="h-full flex flex-col">
@@ -253,6 +223,9 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           components={{
             event: EventComponent as any,
             toolbar: CustomToolbar,
+          }}
+          formats={{
+            timeGutterFormat: (date: Date) => moment(date).format('h A'),
           }}
           style={{ height: '100%' }}
           min={new Date(2023, 0, 1, 6, 0, 0)} // 6 AM
