@@ -8,6 +8,7 @@ import { ItineraryItem, VaultItem } from '@/lib/db'
 import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[tripId]/actions'
 import { useTransition, useState, useEffect } from 'react'
 import { getActivityTypeHexColor } from '@/lib/activityTypes'
+import ActivityEditModal from './ActivityEditModal'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -64,6 +65,9 @@ function CustomToolbar({ label, onNavigate, onView, view }: ToolbarProps) {
 export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate }: CalendarBoardProps) {
   const [isPending, startTransition] = useTransition()
   const [dragItem, setDragItem] = useState<any>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedVaultItem, setSelectedVaultItem] = useState<VaultItem | null>(null)
+  const [selectedItineraryItem, setSelectedItineraryItem] = useState<ItineraryItem | null>(null)
 
   // Calculate default date based on trip start date or current date
   const getDefaultDate = () => {
@@ -140,6 +144,86 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     })
   }
 
+  const handleEventClick = (event: any) => {
+    const calendarEvent = event as CalendarEvent
+    if (calendarEvent.resource?.vault_item) {
+      setSelectedVaultItem(calendarEvent.resource.vault_item)
+      setSelectedItineraryItem(calendarEvent.resource)
+      setEditModalOpen(true)
+    }
+  }
+
+  const handleSave = async (data: { name: string; description: string; activityType: any }, saveToAll: boolean) => {
+    if (!selectedVaultItem) return
+
+    try {
+      if (saveToAll) {
+        // Update the original vault item
+        const response = await fetch(`/api/trip/${tripId}/vault/${selectedVaultItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+        
+        if (!response.ok) throw new Error('Failed to update vault item')
+      } else {
+        // Create a copy and update the current itinerary item to reference the new vault item
+        const response = await fetch(`/api/trip/${tripId}/vault/copy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            originalItemId: selectedVaultItem.id,
+            ...data
+          })
+        })
+        
+        if (!response.ok) throw new Error('Failed to create vault item copy')
+        
+        // Get the new vault item ID from the response
+        const result = await response.json()
+        
+        // Update the itinerary item to reference the new vault item
+        if (selectedItineraryItem) {
+          const updateResponse = await fetch(`/api/trip/${tripId}/itinerary/${selectedItineraryItem.id}/vault-reference`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newVaultItemId: result.vaultItemId })
+          })
+          
+          if (!updateResponse.ok) throw new Error('Failed to update itinerary item reference')
+        }
+      }
+      
+      onUpdate?.()
+    } catch (error) {
+      console.error('Failed to save:', error)
+      throw error
+    }
+  }
+
+  const handleDelete = async (type: 'vault' | 'itinerary') => {
+    if (!selectedVaultItem || !selectedItineraryItem) return
+
+    try {
+      if (type === 'itinerary') {
+        // Delete the itinerary item
+        await deleteItinerary(selectedItineraryItem.id)
+      } else if (type === 'vault') {
+        // Delete the vault item
+        const response = await fetch(`/api/trip/${tripId}/vault/${selectedVaultItem.id}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) throw new Error('Failed to delete vault item')
+      }
+      
+      onUpdate?.()
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      throw error
+    }
+  }
+
   // Event style getter for calendar events
   const eventStyleGetter = (event: any, start: Date, end: Date, isSelected: boolean) => {
     const calendarEvent = event as CalendarEvent
@@ -202,6 +286,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           resizable
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
+          onSelectEvent={handleEventClick}
           eventPropGetter={eventStyleGetter}
           dragFromOutsideItem={() => dragItem}
           onDropFromOutside={({ start, end }) => {
@@ -243,6 +328,15 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           Drop here to add to itinerary
         </div>
       )}
+
+      <ActivityEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        vaultItem={selectedVaultItem}
+        itineraryItem={selectedItineraryItem}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

@@ -134,7 +134,7 @@ export default function TripClient({ tripId }: TripClientProps) {
             {/* Vault List */}
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-y-auto">
-                <VaultList items={vaultItems} />
+                <VaultList items={vaultItems} onUpdate={loadData} />
               </div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export default function TripClient({ tripId }: TripClientProps) {
                       tripId={tripId} 
                       onUploadComplete={loadData}
                     />
-                    <VaultList items={vaultItems} />
+                    <VaultList items={vaultItems} onUpdate={loadData} />
                   </div>
                 </div>
               </div>

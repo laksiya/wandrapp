@@ -6,16 +6,19 @@ import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { getImageFromGCS } from '@/app/trip/[tripId]/actions'
 import { getActivityTypeColor, getActivityTypeBorderColor, validateActivityType, getActivityTypeHexColor } from '@/lib/activityTypes'
+import ActivityEditModal from './ActivityEditModal'
 
 interface VaultListProps {
   items: VaultItem[]
+  onUpdate?: () => void
 }
 
 interface VaultItemCardProps {
   item: VaultItem
+  onEdit: (item: VaultItem) => void
 }
 
-function VaultItemCard({ item }: VaultItemCardProps) {
+function VaultItemCard({ item, onEdit }: VaultItemCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'vaultItem',
     item: { id: item.id, name: item.name, vaultItem: item },
@@ -80,11 +83,18 @@ function VaultItemCard({ item }: VaultItemCardProps) {
     return icons[activityType] || '📍'
   }
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent opening modal when dragging
+    if (isDragging) return
+    onEdit(item)
+  }
+
   return (
     <div
       ref={drag as any}
-      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-move hover:shadow-md ${isDragging ? 'dragging opacity-50 scale-95' : ''}`}
+      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-pointer hover:shadow-md ${isDragging ? 'dragging opacity-50 scale-95' : ''}`}
       style={{ borderColor: borderHex }}
+      onClick={handleClick}
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0">
@@ -138,7 +148,69 @@ function VaultItemCard({ item }: VaultItemCardProps) {
   )
 }
 
-export default function VaultList({ items }: VaultListProps) {
+export default function VaultList({ items, onUpdate }: VaultListProps) {
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null)
+
+  const handleEdit = (item: VaultItem) => {
+    setSelectedItem(item)
+    setEditModalOpen(true)
+  }
+
+  const handleSave = async (data: { name: string; description: string; activityType: any }, saveToAll: boolean) => {
+    if (!selectedItem) return
+
+    try {
+      if (saveToAll) {
+        // Update the original vault item
+        const response = await fetch(`/api/trip/${selectedItem.trip_id}/vault/${selectedItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+        
+        if (!response.ok) throw new Error('Failed to update vault item')
+      } else {
+        // Create a copy and update the current instance
+        const response = await fetch(`/api/trip/${selectedItem.trip_id}/vault/copy`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            originalItemId: selectedItem.id,
+            ...data
+          })
+        })
+        
+        if (!response.ok) throw new Error('Failed to create vault item copy')
+      }
+      
+      onUpdate?.()
+    } catch (error) {
+      console.error('Failed to save:', error)
+      throw error
+    }
+  }
+
+  const handleDelete = async (type: 'vault' | 'itinerary') => {
+    if (!selectedItem) return
+
+    try {
+      if (type === 'vault') {
+        // Delete the vault item
+        const response = await fetch(`/api/trip/${selectedItem.trip_id}/vault/${selectedItem.id}`, {
+          method: 'DELETE'
+        })
+        
+        if (!response.ok) throw new Error('Failed to delete vault item')
+      }
+      
+      onUpdate?.()
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      throw error
+    }
+  }
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
@@ -159,10 +231,18 @@ export default function VaultList({ items }: VaultListProps) {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <VaultItemCard key={item.id} item={item} />
+            <VaultItemCard key={item.id} item={item} onEdit={handleEdit} />
           ))}
         </div>
       )}
+
+      <ActivityEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        vaultItem={selectedItem}
+        onSave={handleSave}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

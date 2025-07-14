@@ -7,6 +7,7 @@ import { Storage } from '@google-cloud/storage'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { updateVaultItemDB, createVaultItemCopyDB, updateItineraryItemVaultReferenceDB } from '@/lib/db-operations'
 
 // Initialize Google Cloud Storage (for production)
 let storage: Storage | null = null
@@ -321,5 +322,41 @@ export async function createVaultItem(tripId: string, name: string, description:
   } catch (error) {
     console.error('Failed to create vault item:', error)
     throw new Error('Failed to create vault item')
+  }
+}
+
+export async function updateVaultItem(itemId: string, name: string, description: string, activityType: string) {
+  try {
+    const tripId = await updateVaultItemDB(itemId, name, description, activityType)
+    revalidatePath(`/trip/${tripId}`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update vault item:', error)
+    throw new Error('Failed to update vault item')
+  }
+}
+
+export async function createVaultItemCopy(tripId: string, originalItemId: string, name: string, description: string, activityType: string) {
+  try {
+    await createVaultItemCopyDB(tripId, originalItemId, name, description, activityType)
+    revalidatePath(`/trip/${tripId}`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to create vault item copy:', error)
+    throw new Error('Failed to create vault item copy')
+  }
+}
+
+export async function updateItineraryItemVaultReference(itineraryItemId: string, newVaultItemId: string) {
+  try {
+    const tripId = await updateItineraryItemVaultReferenceDB(itineraryItemId, newVaultItemId)
+    revalidatePath(`/trip/${tripId}`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update itinerary item vault reference:', error)
+    throw new Error('Failed to update itinerary item vault reference')
   }
 }
