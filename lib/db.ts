@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import { ActivityType } from './activityTypes';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');
@@ -20,7 +21,7 @@ export interface VaultItem {
   trip_id: string;
   name: string;
   description?: string;
-  activity_type?: string;
+  activity_type?: ActivityType;
   image_url?: string;
   created_at: string;
   updated_at: string;

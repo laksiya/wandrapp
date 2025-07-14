@@ -5,6 +5,7 @@ import { VaultItem } from '@/lib/db'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { getImageFromGCS } from '@/app/trip/[tripId]/actions'
+import { getActivityTypeColor, getActivityTypeBorderColor, validateActivityType, getActivityTypeHexColor } from '@/lib/activityTypes'
 
 interface VaultListProps {
   items: VaultItem[]
@@ -57,12 +58,13 @@ function VaultItemCard({ item }: VaultItemCardProps) {
     loadImage()
   }, [item.image_url])
 
+  const borderHex = getActivityTypeHexColor(validateActivityType(item.activity_type || 'Other'));
+
   return (
     <div
       ref={drag as any}
-      className={`vault-item bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3 ${
-        isDragging ? 'dragging' : ''
-      }`}
+      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-4 mb-3 transition-colors duration-200 ${isDragging ? 'dragging' : ''}`}
+      style={{ borderColor: borderHex }}
     >
       <div className="flex items-start space-x-3">
         {item.image_url && (
@@ -89,7 +91,7 @@ function VaultItemCard({ item }: VaultItemCardProps) {
             {item.name}
           </h4>
           {item.activity_type && (
-            <span className="inline-block px-2 py-1 text-xs bg-primary-100 text-primary-700 rounded-full mt-1">
+            <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${getActivityTypeColor(item.activity_type as any)}`}>
               {item.activity_type}
             </span>
           )}

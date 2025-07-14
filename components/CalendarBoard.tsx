@@ -7,6 +7,7 @@ import { useDrop } from 'react-dnd'
 import { ItineraryItem, VaultItem } from '@/lib/db'
 import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[tripId]/actions'
 import { useTransition, useState } from 'react'
+import { getActivityTypeHexColor } from '@/lib/activityTypes'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -106,15 +107,36 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     })
   }
 
+  // Event style getter for calendar events
+  const eventStyleGetter = (event: any, start: Date, end: Date, isSelected: boolean) => {
+    const calendarEvent = event as CalendarEvent
+    const activityType = calendarEvent.resource?.vault_item?.activity_type
+    const backgroundColor = activityType ? getActivityTypeHexColor(activityType) : '#64748B'
+    
+    const style = {
+      backgroundColor: backgroundColor,
+      borderRadius: '4px',
+      opacity: 0.9,
+      color: 'white',
+      border: '0px',
+      display: 'block',
+      fontWeight: '500'
+    }
+    
+    return {
+      style: style
+    }
+  }
+
   const EventComponent = ({ event }: { event: CalendarEvent }) => (
     <div className="flex items-center justify-between">
-      <span className="truncate flex-1">{event.title}</span>
+      <span className="truncate flex-1 text-white font-medium">{event.title}</span>
       <button
         onClick={(e) => {
           e.stopPropagation()
           handleDeleteEvent(event.id)
         }}
-        className="ml-2 text-white hover:text-red-200 text-xs"
+        className="ml-2 text-white hover:text-red-200 text-xs font-bold"
       >
         ×
       </button>
@@ -152,6 +174,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           resizable
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
+          eventPropGetter={eventStyleGetter}
           dragFromOutsideItem={() => dragItem}
           onDropFromOutside={({ start, end }) => {
             if (dragItem) {
