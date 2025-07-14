@@ -119,24 +119,24 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
 
   if (mode === 'select') {
     return (
-      <div className="mb-6">
-        <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 text-center">
-          <div className="text-4xl mb-4">➕</div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">
-            Add to Your Trip
+      <div className="mb-4">
+        <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-4 text-center">
+          <div className="text-2xl mb-2">➕</div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Add Activity
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             <button
               onClick={() => setMode('screenshot')}
-              className="w-full bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600 transition-colors"
+              className="w-full bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 transition-colors text-sm"
             >
               📸 Upload Screenshot
             </button>
             <button
               onClick={() => setMode('manual')}
-              className="w-full bg-green-500 text-white px-6 py-3 rounded-md hover:bg-green-600 transition-colors"
+              className="w-full bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-colors text-sm"
             >
-              ✏️ Create Event from Scratch
+              ✏️ Create Event
             </button>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
 
   if (mode === 'screenshot') {
     return (
-      <div className="mb-6">
+      <div className="mb-4">
         <div
           className={`upload-zone ${isDragOver ? 'dragover' : ''}`}
           onDrop={handleDrop}
@@ -165,26 +165,26 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
             disabled={isPending}
           />
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <div className="text-4xl">📸</div>
+              <div className="text-2xl">📸</div>
               <button
                 onClick={resetToSelect}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 text-sm"
               >
                 ← Back
               </button>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                Upload Travel Screenshot
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Upload Screenshot
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-xs text-gray-500 mb-3">
                 Drop an image here or click to browse
               </p>
               <label
                 htmlFor="file-upload"
-                className={`inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer transition-colors ${
+                className={`inline-flex items-center px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer transition-colors text-sm ${
                   isPending ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
@@ -199,21 +199,21 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
 
   if (mode === 'manual') {
     return (
-      <div className="mb-6">
-        <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-700">Create Event</h3>
+      <div className="mb-4">
+        <div className="bg-white rounded-lg border-2 border-gray-200 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Create Event</h3>
             <button
               onClick={resetToSelect}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 text-sm"
             >
               ← Back
             </button>
           </div>
           
-          <form onSubmit={handleManualEventSubmit} className="space-y-4">
+          <form onSubmit={handleManualEventSubmit} className="space-y-3">
             <div>
-              <label htmlFor="event-name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="event-name" className="block text-xs font-medium text-gray-700 mb-1">
                 Event Name *
               </label>
               <input
@@ -221,35 +221,35 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
                 id="event-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="Enter event name"
                 required
               />
             </div>
             
             <div>
-              <label htmlFor="event-description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="event-description" className="block text-xs font-medium text-gray-700 mb-1">
                 Description
               </label>
               <textarea
                 id="event-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="Enter event description (optional)"
-                rows={3}
+                rows={2}
               />
             </div>
             
             <div>
-              <label htmlFor="activity-type" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="activity-type" className="block text-xs font-medium text-gray-700 mb-1">
                 Activity Type
               </label>
               <select
                 id="activity-type"
                 value={formData.activityType}
                 onChange={(e) => setFormData({ ...formData, activityType: e.target.value as ActivityType })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
               >
                 {VALID_ACTIVITY_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -260,10 +260,10 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
             </div>
             
             <div>
-              <label htmlFor="event-image" className="block text-sm font-medium text-gray-700 mb-1">
-                Thumbnail Image (Optional)
+              <label htmlFor="event-image" className="block text-xs font-medium text-gray-700 mb-1">
+                Thumbnail (Optional)
               </label>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <input
                   type="file"
                   id="event-image"
@@ -273,31 +273,26 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
                 />
                 <label
                   htmlFor="event-image"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-center"
+                  className="flex-1 px-2 py-1 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-center text-xs"
                 >
-                  {formData.imageFile ? formData.imageFile.name : 'Choose image file'}
+                  {formData.imageFile ? formData.imageFile.name.substring(0, 15) + '...' : 'Choose image'}
                 </label>
                 {formData.imageFile && (
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, imageFile: null })}
-                    className="px-3 py-2 text-red-600 hover:text-red-800"
+                    className="px-2 py-1 text-red-600 hover:text-red-800 text-xs"
                   >
-                    Remove
+                    ×
                   </button>
                 )}
               </div>
-              {formData.imageFile && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Selected: {formData.imageFile.name}
-                </p>
-              )}
             </div>
             
             <button
               type="submit"
               disabled={isPending || !formData.name.trim()}
-              className={`w-full px-4 py-2 text-white rounded-md transition-colors ${
+              className={`w-full px-3 py-2 text-white rounded-md transition-colors text-sm ${
                 isPending || !formData.name.trim()
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-500 hover:bg-green-600'

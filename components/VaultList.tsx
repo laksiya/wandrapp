@@ -83,7 +83,7 @@ function VaultItemCard({ item }: VaultItemCardProps) {
   return (
     <div
       ref={drag as any}
-      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-4 mb-3 transition-colors duration-200 ${isDragging ? 'dragging' : ''}`}
+      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-move hover:shadow-md ${isDragging ? 'dragging opacity-50 scale-95' : ''}`}
       style={{ borderColor: borderHex }}
     >
       <div className="flex items-start space-x-3">
@@ -92,26 +92,26 @@ function VaultItemCard({ item }: VaultItemCardProps) {
             // Show actual image if available
             <>
               {isLoading ? (
-                <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
+                <div className="w-12 h-12 bg-gray-200 rounded-md animate-pulse" />
               ) : imageSrc && !imageError ? (
                 <Image
                   src={imageSrc}
                   alt={item.name}
-                  width={60}
-                  height={60}
+                  width={48}
+                  height={48}
                   className="rounded-md object-cover"
                   onError={() => setImageError(true)}
                 />
               ) : (
-                <div className="w-[60px] h-[60px] bg-gray-100 rounded-md flex items-center justify-center">
-                  <span className="text-gray-400 text-2xl">📸</span>
+                <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center">
+                  <span className="text-gray-400 text-lg">📸</span>
                 </div>
               )}
             </>
           ) : (
             // Show placeholder when no image is provided
             <div 
-              className="w-[60px] h-[60px] rounded-md flex items-center justify-center text-2xl"
+              className="w-12 h-12 rounded-md flex items-center justify-center text-lg"
               style={{ backgroundColor: `${borderHex}20` }}
             >
               {getPlaceholderIcon(item.activity_type || 'Other')}
@@ -119,7 +119,7 @@ function VaultItemCard({ item }: VaultItemCardProps) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">
+          <h4 className="text-sm font-semibold text-gray-900 truncate leading-tight">
             {item.name}
           </h4>
           {item.activity_type && (
@@ -128,7 +128,7 @@ function VaultItemCard({ item }: VaultItemCardProps) {
             </span>
           )}
           {item.description && (
-            <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+            <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-tight">
               {item.description}
             </p>
           )}
@@ -140,19 +140,24 @@ function VaultItemCard({ item }: VaultItemCardProps) {
 
 export default function VaultList({ items }: VaultListProps) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Activity Vault ({items.length})
-      </h3>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 lg:block hidden">
+          Activity Vault
+        </h3>
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+          {items.length}
+        </span>
+      </div>
       
       {items.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <div className="text-4xl mb-2">🏖️</div>
-          <p>No activities yet</p>
-          <p className="text-sm">Upload screenshots to get started</p>
+          <div className="text-3xl mb-2">🏖️</div>
+          <p className="text-sm">No activities yet</p>
+          <p className="text-xs">Upload screenshots to get started</p>
         </div>
       ) : (
-        <div>
+        <div className="space-y-2">
           {items.map((item) => (
             <VaultItemCard key={item.id} item={item} />
           ))}
