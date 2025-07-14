@@ -25,6 +25,19 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
   })
 
   const handleFileUpload = async (file: File) => {
+    // Detect HEIC/HEIF files (iPhone screenshots)
+    if (
+      file.type === 'image/heic' ||
+      file.type === 'image/heif' ||
+      file.name.toLowerCase().endsWith('.heic') ||
+      file.name.toLowerCase().endsWith('.heif')
+    ) {
+      alert(
+        'iPhone screenshots are saved as HEIC files, which are not supported by most browsers and AI APIs.\n\nPlease convert your screenshot to JPEG or PNG before uploading. You can use an online converter like https://heic2jpg.com or "Save as JPEG" from the Photos app.'
+      )
+      return
+    }
+
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file')
       return
