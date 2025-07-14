@@ -1,12 +1,13 @@
 'use client'
 
-import { Calendar, momentLocalizer, View } from 'react-big-calendar'
+import { Calendar, momentLocalizer, View, ToolbarProps } from 'react-big-calendar'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import moment from 'moment'
 import { useDrop } from 'react-dnd'
 import { ItineraryItem, VaultItem } from '@/lib/db'
 import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[tripId]/actions'
-import { useTransition, useState } from 'react'
+import { useTransition, useState, useEffect } from 'react'
+import { getActivityTypeHexColor } from '@/lib/activityTypes'
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop(Calendar)
@@ -25,6 +26,39 @@ interface CalendarEvent {
   start: Date
   end: Date
   resource: ItineraryItem
+}
+
+// Custom Toolbar for react-big-calendar
+function CustomToolbar({ label, onNavigate, onView, view }: ToolbarProps) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-2 border-b border-gray-100 bg-white">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button onClick={() => onNavigate('TODAY')} className="px-3 py-1 rounded border text-sm bg-white hover:bg-gray-100">Today</button>
+          <button onClick={() => onNavigate('PREV')} className="px-3 py-1 rounded border text-sm bg-white hover:bg-gray-100">Back</button>
+          <button onClick={() => onNavigate('NEXT')} className="px-3 py-1 rounded border text-sm bg-white hover:bg-gray-100">Next</button>
+        </div>
+        <div className="w-2" />
+        <div className="flex items-center gap-2 border-l border-gray-200 pl-2 ml-2">
+          <button
+            onClick={() => onView('week')}
+            className={`px-3 py-1 rounded border text-sm ${view === 'week' ? 'bg-primary-500 text-white' : 'bg-white hover:bg-gray-100'}`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => onView('day')}
+            className={`px-3 py-1 rounded border text-sm ${view === 'day' ? 'bg-primary-500 text-white' : 'bg-white hover:bg-gray-100'}`}
+          >
+            Day
+          </button>
+        </div>
+      </div>
+      <div className="text-base font-medium text-gray-800 text-center sm:text-right w-full sm:w-auto">
+        {label}
+      </div>
+    </div>
+  )
 }
 
 export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate }: CalendarBoardProps) {
@@ -106,38 +140,54 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     })
   }
 
+  // Event style getter for calendar events
+  const eventStyleGetter = (event: any, start: Date, end: Date, isSelected: boolean) => {
+    const calendarEvent = event as CalendarEvent
+    const activityType = calendarEvent.resource?.vault_item?.activity_type
+    const backgroundColor = activityType ? getActivityTypeHexColor(activityType) : '#64748B'
+    
+    const style = {
+      backgroundColor: backgroundColor,
+      borderRadius: '4px',
+      opacity: 0.9,
+      color: 'white',
+      border: '0px',
+      display: 'block',
+      fontWeight: '500',
+      fontSize: '12px', // Smaller text for mobile
+      padding: '2px 4px', // Tighter padding
+      margin: '1px 0', // Smaller margins
+      minHeight: '20px', // Minimum height for touch targets
+    }
+    
+    return {
+      style: style
+    }
+  }
+
   const EventComponent = ({ event }: { event: CalendarEvent }) => (
     <div className="flex items-center justify-between">
-      <span className="truncate flex-1">{event.title}</span>
+      <span className="truncate flex-1 text-white font-medium">{event.title}</span>
       <button
         onClick={(e) => {
           e.stopPropagation()
           handleDeleteEvent(event.id)
         }}
-        className="ml-2 text-white hover:text-red-200 text-xs"
+        className="ml-2 text-white hover:text-red-200 text-xs font-bold"
       >
         ×
       </button>
     </div>
   )
 
+
+
   return (
-    <div className="h-full">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        {tripStartDate && tripEndDate ? (
-          <>
-            {new Date(tripStartDate).toLocaleDateString()} - {new Date(tripEndDate).toLocaleDateString()} Itinerary
-          </>
-        ) : (
-          'Trip Itinerary'
-        )}
-        {isPending && <span className="ml-2 text-sm text-gray-500">(Updating...)</span>}
-      </h3>
-      
+    <div className="h-full flex flex-col">
       <div 
         ref={drop as any}
-        className={`h-[600px] bg-white rounded-lg border ${
-          isOver ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+        className={`flex-1 bg-white ${
+          isOver ? 'border-primary-500 bg-primary-50' : ''
         }`}
       >
         <DnDCalendar
@@ -152,6 +202,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           resizable
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
+          eventPropGetter={eventStyleGetter}
           dragFromOutsideItem={() => dragItem}
           onDropFromOutside={({ start, end }) => {
             if (dragItem) {
@@ -171,15 +222,24 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           onDragOver={(e) => e.preventDefault()}
           components={{
             event: EventComponent as any,
+            toolbar: CustomToolbar,
           }}
-          style={{ height: '100%', padding: '16px' }}
+          formats={{
+            timeGutterFormat: (date: Date) => moment(date).format('h A'),
+          }}
+          style={{ height: '100%' }}
           min={new Date(2023, 0, 1, 6, 0, 0)} // 6 AM
           max={new Date(2023, 0, 1, 23, 59, 59)} // 11:59 PM
+          // Mobile optimizations
+          step={60} // 1 hour steps
+          timeslots={1} // 1 timeslot per step
+          // Responsive toolbar
+          toolbar={true}
         />
       </div>
       
       {isOver && (
-        <div className="mt-2 text-sm text-primary-600 text-center">
+        <div className="p-2 text-sm text-primary-600 text-center bg-primary-50 border-t border-primary-200">
           Drop here to add to itinerary
         </div>
       )}

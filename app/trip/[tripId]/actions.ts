@@ -49,6 +49,7 @@ export async function uploadScreenshot(formData: FormData) {
   try {
     const file = formData.get('file') as File
     const tripId = formData.get('tripId') as string
+    const manualData = formData.get('manualData') as string
 
     if (!file || !tripId) {
       throw new Error('File and tripId are required')
@@ -58,8 +59,20 @@ export async function uploadScreenshot(formData: FormData) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Parse image with OpenAI Vision using the file buffer directly
-    const parsed = await parseScreenshot(file)
+    let parsed: { name: string; description: string; activityType: string }
+
+    if (manualData) {
+      // Use manual data instead of AI parsing
+      const data = JSON.parse(manualData)
+      parsed = {
+        name: data.name,
+        description: data.description || '',
+        activityType: data.activityType
+      }
+    } else {
+      // Parse image with OpenAI Vision using the file buffer directly
+      parsed = await parseScreenshot(file)
+    }
 
     let imageUrl: string
 
@@ -292,5 +305,21 @@ export async function getImageFromGCS(imageUrl: string): Promise<string | null> 
   } catch (error) {
     console.error('Failed to download image from GCS:', error);
     return null;
+  }
+}
+
+export async function createVaultItem(tripId: string, name: string, description: string, activityType: string) {
+  try {
+    await sql`
+      INSERT INTO vault_items (trip_id, name, description, activity_type)
+      VALUES (${tripId}, ${name}, ${description}, ${activityType})
+    `
+
+    revalidatePath(`/trip/${tripId}`)
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to create vault item:', error)
+    throw new Error('Failed to create vault item')
   }
 }

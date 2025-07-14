@@ -7,7 +7,7 @@ import UploadButton from '@/components/UploadButton'
 import VaultList from '@/components/VaultList'
 import CalendarBoard from '@/components/CalendarBoard'
 import Header from '@/components/Header'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getVaultItems, getItineraryItems, getTrip } from './actions'
 
 interface TripClientProps {
@@ -20,6 +20,9 @@ export default function TripClient({ tripId }: TripClientProps) {
   const [trip, setTrip] = useState<Trip | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showVault, setShowVault] = useState(false)
+  const [showTip, setShowTip] = useState(true)
+  const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const loadData = async () => {
     try {
@@ -49,6 +52,27 @@ export default function TripClient({ tripId }: TripClientProps) {
   useEffect(() => {
     loadData()
   }, [tripId])
+
+  useEffect(() => {
+    if (showTip) {
+      tipTimeoutRef.current = setTimeout(() => setShowTip(false), 5000)
+    }
+    return () => {
+      if (tipTimeoutRef.current) clearTimeout(tipTimeoutRef.current)
+    }
+  }, [showTip])
+
+  // Hide tip on any user interaction
+  useEffect(() => {
+    if (!showTip) return
+    const hideTip = () => setShowTip(false)
+    window.addEventListener('touchstart', hideTip, { once: true })
+    window.addEventListener('mousedown', hideTip, { once: true })
+    return () => {
+      window.removeEventListener('touchstart', hideTip)
+      window.removeEventListener('mousedown', hideTip)
+    }
+  }, [showTip])
 
   if (isLoading) {
     return (
@@ -95,38 +119,99 @@ export default function TripClient({ tripId }: TripClientProps) {
           tripEndDate={trip?.end_date}
         />
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
-            {/* Left Panel - Vault (Mobile: Full width, Desktop: 1/3) */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-full">
-                <UploadButton 
-                  tripId={tripId} 
-                  onUploadComplete={loadData}
-                />
+        {/* Desktop Layout - Canva-inspired */}
+        <div className="hidden lg:flex h-[calc(100vh-64px)]">
+          {/* Left Sidebar - Elements Panel (Compact) */}
+          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+            {/* Upload Section */}
+            <div className="p-4 border-b border-gray-200">
+              <UploadButton 
+                tripId={tripId} 
+                onUploadComplete={loadData}
+              />
+            </div>
+            
+            {/* Vault List */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto">
                 <VaultList items={vaultItems} />
               </div>
             </div>
+          </div>
 
-            {/* Right Panel - Calendar (Mobile: Full width, Desktop: 2/3) */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 h-full">
-                <CalendarBoard 
-                  tripId={tripId}
-                  itineraryItems={itineraryItems}
-                  tripStartDate={trip?.start_date}
-                  tripEndDate={trip?.end_date}
-                  onUpdate={loadData}
-                />
-              </div>
+          {/* Main Canvas Area - Calendar Focus */}
+          <div className="flex-1 bg-gray-50 p-6">
+            <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <CalendarBoard 
+                tripId={tripId}
+                itineraryItems={itineraryItems}
+                tripStartDate={trip?.start_date}
+                tripEndDate={trip?.end_date}
+                onUpdate={loadData}
+              />
             </div>
           </div>
-        </main>
+        </div>
 
-        {/* Mobile Instructions */}
-        <div className="lg:hidden fixed bottom-4 left-4 right-4 bg-primary-500 text-white p-3 rounded-lg text-sm text-center">
-          💡 Drag activities from the vault to the calendar to add them to your itinerary
+        {/* Mobile Layout - Calendar Focused */}
+        <div className="lg:hidden">
+          {/* Mobile Calendar - Full Width */}
+          <div className="h-[calc(100vh-64px)] bg-white">
+            <CalendarBoard 
+              tripId={tripId}
+              itineraryItems={itineraryItems}
+              tripStartDate={trip?.start_date}
+              tripEndDate={trip?.end_date}
+              onUpdate={loadData}
+            />
+          </div>
+
+          {/* Mobile Vault - Slide-up Panel */}
+          {showVault && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden">
+              <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Activity Vault</h3>
+                  <button
+                    onClick={() => setShowVault(false)}
+                    className="p-2 text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="overflow-y-auto max-h-[calc(80vh-80px)]">
+                  <div className="p-4">
+                    <UploadButton 
+                      tripId={tripId} 
+                      onUploadComplete={loadData}
+                    />
+                    <VaultList items={vaultItems} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile Floating Action Button */}
+          <div className="fixed bottom-6 right-6 z-30 lg:hidden">
+            <button
+              onClick={() => setShowVault(true)}
+              className="bg-primary-500 text-white p-4 rounded-full shadow-lg hover:bg-primary-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Mobile Instructions */}
+          {showTip && (
+            <div className="fixed bottom-20 left-4 right-4 bg-primary-500 text-white p-3 rounded-lg text-sm text-center z-20 lg:hidden transition-opacity duration-500">
+              💡 Tap the + button to add activities to your vault
+            </div>
+          )}
         </div>
       </div>
     </DndProvider>

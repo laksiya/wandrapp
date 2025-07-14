@@ -69,3 +69,23 @@
 }
 @import "react-big-calendar/lib/css/react-big-calendar.css";
 @import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+
+/* ---------------------------------------
+   React-Big-Calendar: keep time gutter
+   and top-left corner cell perfectly
+   aligned on every breakpoint
+----------------------------------------*/
+
+/* 1 — define a single source of truth            */
+:root {
+  --rbc-gutter: clamp(55px, 7vw, 62px);
+}
+
+/* 2 — apply it to both gutter cells              */
+.rbc-time-gutter,                     /* left-hand times  */
+.rbc-time-header-gutter,              /* empty corner     */
+.rbc-time-header > .rbc-label {       /* "all-day" label  */
+  flex: 0 0 var(--rbc-gutter);        /* fixed flex-basis */
+  width: var(--rbc-gutter);           /* actual width     */
+  min-width: var(--rbc-gutter);       /* stop over-shrink */
+}

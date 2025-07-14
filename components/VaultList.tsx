@@ -5,6 +5,7 @@ import { VaultItem } from '@/lib/db'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { getImageFromGCS } from '@/app/trip/[tripId]/actions'
+import { getActivityTypeColor, getActivityTypeBorderColor, validateActivityType, getActivityTypeHexColor } from '@/lib/activityTypes'
 
 interface VaultListProps {
   items: VaultItem[]
@@ -25,12 +26,14 @@ function VaultItemCard({ item }: VaultItemCardProps) {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     const loadImage = async () => {
       if (!item.image_url) return
       
       setIsLoading(true)
+      setImageError(false)
       try {
         // If it's a GCS URL, use getImageFromGCS
         if (item.image_url.includes('storage.googleapis.com')) {
@@ -38,8 +41,8 @@ function VaultItemCard({ item }: VaultItemCardProps) {
           if (gcsImage) {
             setImageSrc(gcsImage)
           } else {
-            // Fallback to original URL if GCS download fails
-            setImageSrc(item.image_url)
+            // If GCS download fails, don't set imageSrc to avoid broken image
+            setImageError(true)
           }
         } else {
           // For local images, use the URL directly
@@ -47,8 +50,8 @@ function VaultItemCard({ item }: VaultItemCardProps) {
         }
       } catch (error) {
         console.error('Failed to load image:', error)
-        // Fallback to original URL
-        setImageSrc(item.image_url)
+        // Don't set imageSrc to avoid broken image
+        setImageError(true)
       } finally {
         setIsLoading(false)
       }
@@ -57,44 +60,75 @@ function VaultItemCard({ item }: VaultItemCardProps) {
     loadImage()
   }, [item.image_url])
 
+  const borderHex = getActivityTypeHexColor(validateActivityType(item.activity_type || 'Other'));
+
+  // Function to get placeholder icon based on activity type
+  const getPlaceholderIcon = (activityType: string) => {
+    const icons: Record<string, string> = {
+      'Sightseeing': '🏛️',
+      'Culture': '🎭',
+      'Adventure': '🏔️',
+      'Wellness': '🧘',
+      'Entertainment': '🎪',
+      'Shopping': '🛍️',
+      'Events': '🎉',
+      'Transportation': '🚗',
+      'Accommodations': '🏨',
+      'Food & Drink': '🍽️',
+      'Other': '📍'
+    }
+    return icons[activityType] || '📍'
+  }
+
   return (
     <div
       ref={drag as any}
-      className={`vault-item bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-3 ${
-        isDragging ? 'dragging' : ''
-      }`}
+      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-move hover:shadow-md ${isDragging ? 'dragging opacity-50 scale-95' : ''}`}
+      style={{ borderColor: borderHex }}
     >
       <div className="flex items-start space-x-3">
-        {item.image_url && (
-          <div className="flex-shrink-0">
-            {isLoading ? (
-              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
-            ) : imageSrc ? (
-              <Image
-                src={imageSrc}
-                alt={item.name}
-                width={60}
-                height={60}
-                className="rounded-md object-cover"
-              />
-            ) : (
-              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md flex items-center justify-center">
-                <span className="text-gray-400 text-xs">Error</span>
-              </div>
-            )}
-          </div>
-        )}
+        <div className="flex-shrink-0">
+          {item.image_url ? (
+            // Show actual image if available
+            <>
+              {isLoading ? (
+                <div className="w-12 h-12 bg-gray-200 rounded-md animate-pulse" />
+              ) : imageSrc && !imageError ? (
+                <Image
+                  src={imageSrc}
+                  alt={item.name}
+                  width={48}
+                  height={48}
+                  className="rounded-md object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center">
+                  <span className="text-gray-400 text-lg">📸</span>
+                </div>
+              )}
+            </>
+          ) : (
+            // Show placeholder when no image is provided
+            <div 
+              className="w-12 h-12 rounded-md flex items-center justify-center text-lg"
+              style={{ backgroundColor: `${borderHex}20` }}
+            >
+              {getPlaceholderIcon(item.activity_type || 'Other')}
+            </div>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-gray-900 truncate">
+          <h4 className="text-sm font-semibold text-gray-900 truncate leading-tight">
             {item.name}
           </h4>
           {item.activity_type && (
-            <span className="inline-block px-2 py-1 text-xs bg-primary-100 text-primary-700 rounded-full mt-1">
+            <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${getActivityTypeColor(item.activity_type as any)}`}>
               {item.activity_type}
             </span>
           )}
           {item.description && (
-            <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+            <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-tight">
               {item.description}
             </p>
           )}
@@ -106,19 +140,24 @@ function VaultItemCard({ item }: VaultItemCardProps) {
 
 export default function VaultList({ items }: VaultListProps) {
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        Activity Vault ({items.length})
-      </h3>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-gray-900 lg:block hidden">
+          Activity Vault
+        </h3>
+        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+          {items.length}
+        </span>
+      </div>
       
       {items.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <div className="text-4xl mb-2">🏖️</div>
-          <p>No activities yet</p>
-          <p className="text-sm">Upload screenshots to get started</p>
+          <div className="text-3xl mb-2">🏖️</div>
+          <p className="text-sm">No activities yet</p>
+          <p className="text-xs">Upload screenshots to get started</p>
         </div>
       ) : (
-        <div>
+        <div className="space-y-2">
           {items.map((item) => (
             <VaultItemCard key={item.id} item={item} />
           ))}
