@@ -26,12 +26,14 @@ function VaultItemCard({ item }: VaultItemCardProps) {
 
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     const loadImage = async () => {
       if (!item.image_url) return
       
       setIsLoading(true)
+      setImageError(false)
       try {
         // If it's a GCS URL, use getImageFromGCS
         if (item.image_url.includes('storage.googleapis.com')) {
@@ -39,8 +41,8 @@ function VaultItemCard({ item }: VaultItemCardProps) {
           if (gcsImage) {
             setImageSrc(gcsImage)
           } else {
-            // Fallback to original URL if GCS download fails
-            setImageSrc(item.image_url)
+            // If GCS download fails, don't set imageSrc to avoid broken image
+            setImageError(true)
           }
         } else {
           // For local images, use the URL directly
@@ -48,8 +50,8 @@ function VaultItemCard({ item }: VaultItemCardProps) {
         }
       } catch (error) {
         console.error('Failed to load image:', error)
-        // Fallback to original URL
-        setImageSrc(item.image_url)
+        // Don't set imageSrc to avoid broken image
+        setImageError(true)
       } finally {
         setIsLoading(false)
       }
@@ -71,17 +73,18 @@ function VaultItemCard({ item }: VaultItemCardProps) {
           <div className="flex-shrink-0">
             {isLoading ? (
               <div className="w-[60px] h-[60px] bg-gray-200 rounded-md animate-pulse" />
-            ) : imageSrc ? (
+            ) : imageSrc && !imageError ? (
               <Image
                 src={imageSrc}
                 alt={item.name}
                 width={60}
                 height={60}
                 className="rounded-md object-cover"
+                onError={() => setImageError(true)}
               />
             ) : (
-              <div className="w-[60px] h-[60px] bg-gray-200 rounded-md flex items-center justify-center">
-                <span className="text-gray-400 text-xs">Error</span>
+              <div className="w-[60px] h-[60px] bg-gray-100 rounded-md flex items-center justify-center">
+                <span className="text-gray-400 text-2xl">📸</span>
               </div>
             )}
           </div>
