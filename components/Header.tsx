@@ -14,7 +14,7 @@ export default function Header({ tripId, tripName, tripStartDate, tripEndDate }:
   const [showMenu, setShowMenu] = useState(false)
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className="bg-white shadow-sm border-b border-gray-200 relative">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
         <div className="flex flex-wrap items-center justify-between h-auto py-2 gap-y-1">
           {/* Left: Globe, Trip Name, Date Range */}
@@ -39,6 +39,11 @@ export default function Header({ tripId, tripName, tripStartDate, tripEndDate }:
               </span>
             )}
           </div>
+
+          {/* Version indicator */}
+          <span className="absolute right-2 top-1 text-[10px] sm:text-xs text-gray-400 font-mono select-none pointer-events-none opacity-80">
+            v0.1.0
+          </span>
 
           {/* Right: Actions and Menu */}
           <div className="flex items-center space-x-2 sm:space-x-4 mt-2 sm:mt-0">
