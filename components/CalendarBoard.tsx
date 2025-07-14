@@ -6,7 +6,7 @@ import moment from 'moment'
 import { useDrop } from 'react-dnd'
 import { ItineraryItem, VaultItem } from '@/lib/db'
 import { addToItinerary, moveItinerary, deleteItinerary } from '@/app/trip/[tripId]/actions'
-import { useTransition, useState, useEffect } from 'react'
+import { useTransition, useState, useEffect, useRef } from 'react'
 import { getActivityTypeHexColor } from '@/lib/activityTypes'
 import ActivityEditModal from './ActivityEditModal'
 
@@ -31,6 +31,17 @@ interface CalendarEvent {
 
 // Custom Toolbar for react-big-calendar
 function CustomToolbar({ label, onNavigate, onView, view }: ToolbarProps) {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-2 border-b border-gray-100 bg-white">
       <div className="flex flex-wrap items-center gap-2">
@@ -68,6 +79,13 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedVaultItem, setSelectedVaultItem] = useState<VaultItem | null>(null)
   const [selectedItineraryItem, setSelectedItineraryItem] = useState<ItineraryItem | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [currentView, setCurrentView] = useState<View>('week')
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const calendarRef = useRef<any>(null)
+  const touchStartX = useRef<number>(0)
+  const touchStartY = useRef<number>(0)
+  const hasInitialized = useRef<boolean>(false)
 
   // Calculate default date based on trip start date or current date
   const getDefaultDate = () => {
@@ -75,6 +93,51 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
       return new Date(tripStartDate)
     }
     return new Date()
+  }
+
+  // Mobile detection and initial view setup
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      
+      // Only set default view on initial load, not on resize
+      if (!hasInitialized.current) {
+        if (mobile) {
+          setCurrentView('day')
+        }
+        hasInitialized.current = true
+      }
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Swipe gesture handling
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile || currentView !== 'day') return
+
+    const touchEndX = e.changedTouches[0].clientX
+    const touchEndY = e.changedTouches[0].clientY
+    const deltaX = touchEndX - touchStartX.current
+    const deltaY = touchEndY - touchStartY.current
+
+    // Only handle horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+      if (deltaX > 0) {
+        // Swipe right - go to previous day
+        calendarRef.current?.navigate('PREV')
+      } else {
+        // Swipe left - go to next day
+        calendarRef.current?.navigate('NEXT')
+      }
+    }
   }
 
   const [{ isOver }, drop] = useDrop(() => ({
@@ -264,24 +327,47 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     </div>
   )
 
-
-
   return (
     <div className="h-full flex flex-col">
+      {/* Mobile swipe indicators */}
+      {isMobile && currentView === 'day' && (
+        <div className="swipe-indicator flex justify-between items-center px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
+          <div className="flex items-center">
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Swipe right for previous day
+          </div>
+          <div className="flex items-center">
+            Swipe left for next day
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      )}
+
       <div 
         ref={drop as any}
         className={`flex-1 bg-white ${
           isOver ? 'border-primary-500 bg-primary-50' : ''
         }`}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <DnDCalendar
+          ref={calendarRef}
           localizer={localizer}
           events={events}
           startAccessor={(event: any) => event.start}
           endAccessor={(event: any) => event.end}
-          defaultView="week"
+          defaultView={isMobile ? 'day' : 'week'}
+          view={currentView}
+          onView={(view) => setCurrentView(view)}
           views={['week', 'day']}
           defaultDate={getDefaultDate()}
+          date={currentDate}
+          onNavigate={(date) => setCurrentDate(date)}
           selectable
           resizable
           onEventDrop={handleEventDrop}

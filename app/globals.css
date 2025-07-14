@@ -66,7 +66,54 @@
   .rbc-toolbar-label {
     @apply text-lg font-semibold;
   }
+
+  /* Mobile day view optimizations */
+  .rbc-time-view {
+    @apply text-sm;
+  }
+
+  .rbc-time-header {
+    @apply text-xs;
+  }
+
+  .rbc-time-gutter {
+    @apply text-xs;
+  }
+
+  .rbc-event {
+    @apply text-xs px-1 py-0.5;
+    min-height: 18px;
+  }
+
+  /* Improve touch targets */
+  .rbc-time-slot {
+    @apply min-h-[40px];
+  }
+
+  /* Swipe indicator styles */
+  .swipe-indicator {
+    @apply opacity-60 transition-opacity duration-300;
+  }
+
+  .swipe-indicator:hover {
+    @apply opacity-100;
+  }
+
+  /* Calendar navigation transitions */
+  .rbc-calendar {
+    @apply transition-all duration-200;
+  }
+
+  /* Improve day view readability on mobile */
+  .rbc-time-view .rbc-time-content {
+    @apply border-l-0;
+  }
+
+  .rbc-time-view .rbc-time-header {
+    @apply border-l-0;
+  }
 }
+
 @import "react-big-calendar/lib/css/react-big-calendar.css";
 @import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 
