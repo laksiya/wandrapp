@@ -82,10 +82,9 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
   const [isMobile, setIsMobile] = useState(false)
   const [currentView, setCurrentView] = useState<View>('week')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
-  const calendarRef = useRef<any>(null)
+  const hasInitialized = useRef<boolean>(false)
   const touchStartX = useRef<number>(0)
   const touchStartY = useRef<number>(0)
-  const hasInitialized = useRef<boolean>(false)
 
   // Calculate default date based on trip start date or current date
   const getDefaultDate = () => {
@@ -132,10 +131,10 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
       if (deltaX > 0) {
         // Swipe right - go to previous day
-        calendarRef.current?.navigate('PREV')
+        setCurrentDate(prev => moment(prev).subtract(1, 'day').toDate())
       } else {
         // Swipe left - go to next day
-        calendarRef.current?.navigate('NEXT')
+        setCurrentDate(prev => moment(prev).add(1, 'day').toDate())
       }
     }
   }
@@ -356,7 +355,6 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
         onTouchEnd={handleTouchEnd}
       >
         <DnDCalendar
-          ref={calendarRef}
           localizer={localizer}
           events={events}
           startAccessor={(event: any) => event.start}
