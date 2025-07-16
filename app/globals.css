@@ -8,7 +8,7 @@
 }
 
 .rbc-toolbar {
-  @apply mb-4 p-4 bg-gray-50 rounded-lg;
+  @apply mb-4 p-4 bg-gray-50 rounded-lg sticky top-0 z-20;
 }
 
 .rbc-toolbar button {
@@ -55,6 +55,59 @@
 
 .upload-zone.dragover {
   @apply border-primary-500 bg-primary-50;
+}
+
+/* Full 24-hour calendar view styles */
+.rbc-time-view {
+  @apply overflow-hidden;
+  max-height: none;
+  height: auto !important;
+}
+
+.rbc-time-content {
+  @apply overflow-y-auto;
+  height: auto !important;
+}
+
+/* Ensure proper scrolling for desktop */
+@media (min-width: 769px) {
+  .rbc-time-view {
+    @apply overflow-hidden;
+    max-height: none;
+    min-height: 600px;
+  }
+  
+  .rbc-time-content {
+    @apply overflow-y-auto;
+    min-height: 600px;
+  }
+  
+  /* Keep calendar header fixed while allowing time content to scroll */
+  .rbc-calendar {
+    @apply overflow-hidden;
+    height: 100%;
+  }
+  
+  /* Ensure time header stays visible */
+  .rbc-time-header {
+    @apply sticky top-0 z-10 bg-white;
+  }
+  
+  /* Only the time content should scroll */
+  .rbc-time-content {
+    @apply overflow-y-auto;
+    max-height: none;
+  }
+  
+  /* Prevent outer scrollbar by hiding overflow on the main calendar container */
+  .rbc-calendar .rbc-time-view {
+    @apply overflow-hidden;
+  }
+  
+  /* Ensure only the time slots scroll */
+  .rbc-time-view .rbc-time-content {
+    @apply overflow-y-auto;
+  }
 }
 
 /* Mobile responsive adjustments */
@@ -116,6 +169,20 @@
 
 @import "react-big-calendar/lib/css/react-big-calendar.css";
 @import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
+
+/* Hide outer scrollbar while keeping inner one */
+.rbc-calendar {
+  overflow: hidden !important;
+}
+
+.rbc-time-view {
+  overflow: hidden !important;
+}
+
+.rbc-time-content {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
 
 /* ---------------------------------------
    React-Big-Calendar: keep time gutter

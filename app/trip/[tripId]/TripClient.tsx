@@ -141,7 +141,7 @@ export default function TripClient({ tripId }: TripClientProps) {
 
           {/* Main Canvas Area - Calendar Focus */}
           <div className="flex-1 bg-gray-50 p-6">
-            <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200">
               <CalendarBoard 
                 tripId={tripId}
                 itineraryItems={itineraryItems}
