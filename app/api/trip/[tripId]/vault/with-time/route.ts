@@ -3,9 +3,10 @@ import { createVaultItemWithTime } from '@/app/trip/[tripId]/actions'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tripId: string } }
+  { params }: { params: Promise<{ tripId: string }> }
 ) {
   try {
+    const { tripId } = await params
     const { name, description, activityType, startTime, endTime } = await request.json()
 
     if (!name || !startTime || !endTime) {
@@ -16,7 +17,7 @@ export async function POST(
     }
 
     const result = await createVaultItemWithTime(
-      params.tripId,
+      tripId,
       name,
       description || '',
       activityType || 'Other',

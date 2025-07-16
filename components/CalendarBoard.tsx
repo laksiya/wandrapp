@@ -19,6 +19,8 @@ interface CalendarBoardProps {
   tripStartDate?: string
   tripEndDate?: string
   onUpdate?: () => void
+  mobileDragItem?: VaultItem | null
+  onMobileDrop?: (item: VaultItem, start: Date, end: Date) => void
 }
 
 interface CalendarEvent {
@@ -73,7 +75,7 @@ function CustomToolbar({ label, onNavigate, onView, view }: ToolbarProps) {
   )
 }
 
-export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate }: CalendarBoardProps) {
+export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, tripEndDate, onUpdate, mobileDragItem, onMobileDrop }: CalendarBoardProps) {
   const [isPending, startTransition] = useTransition()
   const [dragItem, setDragItem] = useState<any>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
@@ -137,6 +139,26 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
         setCurrentDate(prev => moment(prev).add(1, 'day').toDate())
       }
     }
+  }
+
+  // Handle mobile drop on calendar
+  const handleMobileDrop = (e: React.TouchEvent) => {
+    if (!mobileDragItem || !onMobileDrop) return
+
+    const touch = e.changedTouches[0]
+    const calendarElement = e.currentTarget as HTMLElement
+    const rect = calendarElement.getBoundingClientRect()
+    
+    // Calculate relative position within calendar
+    const relativeX = touch.clientX - rect.left
+    const relativeY = touch.clientY - rect.top
+    
+    // Convert to date/time (simplified - you might want more sophisticated logic)
+    const now = new Date()
+    const startTime = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour from now
+    const endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000) // 2 hours duration
+    
+    onMobileDrop(mobileDragItem, startTime, endTime)
   }
 
   const [{ isOver }, drop] = useDrop(() => ({
@@ -357,7 +379,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           isOver ? 'border-primary-500 bg-primary-50' : ''
         }`}
         onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onTouchEnd={mobileDragItem ? handleMobileDrop : handleTouchEnd}
       >
         <DnDCalendar
           localizer={localizer}

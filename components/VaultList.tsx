@@ -3,7 +3,7 @@
 import { useDrag } from 'react-dnd'
 import { VaultItem } from '@/lib/db'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getImageFromGCS } from '@/app/trip/[tripId]/actions'
 import { getActivityTypeColor, getActivityTypeBorderColor, validateActivityType, getActivityTypeHexColor } from '@/lib/activityTypes'
 import ActivityEditModal from './ActivityEditModal'
@@ -11,20 +11,61 @@ import ActivityEditModal from './ActivityEditModal'
 interface VaultListProps {
   items: VaultItem[]
   onUpdate?: () => void
+  onMobileDragStart?: (item: VaultItem) => void
+  onMobileDragEnd?: () => void
 }
 
 interface VaultItemCardProps {
   item: VaultItem
   onEdit: (item: VaultItem) => void
+  onMobileDragStart?: (item: VaultItem) => void
+  onMobileDragEnd?: () => void
 }
 
-function VaultItemCard({ item, onEdit }: VaultItemCardProps) {
+function VaultItemCard({ item, onEdit, onMobileDragStart, onMobileDragEnd }: VaultItemCardProps) {
+  const [isMobile, setIsMobile] = useState(false)
+  const [isLongPressing, setIsLongPressing] = useState(false)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const touchStartTime = useRef<number>(0)
+  const hasMoved = useRef<boolean>(false)
+  const touchStartX = useRef<number>(0)
+  const touchStartY = useRef<number>(0)
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Cleanup long press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
+  // Cleanup long press timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'vaultItem',
     item: { id: item.id, name: item.name, vaultItem: item },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    canDrag: () => !isMobile || isLongPressing, // Only allow drag on mobile if long pressing
   }))
 
   const [imageSrc, setImageSrc] = useState<string | null>(null)
@@ -83,18 +124,92 @@ function VaultItemCard({ item, onEdit }: VaultItemCardProps) {
     return icons[activityType] || '📍'
   }
 
+  // Touch event handlers for long press
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return
+    
+    touchStartTime.current = Date.now()
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+    hasMoved.current = false
+    
+    // Start long press timer
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPressing(true)
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+      // Trigger mobile drag start
+      onMobileDragStart?.(item)
+    }, 500) // 500ms for long press
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile || !longPressTimer.current) return
+    
+    const touchX = e.touches[0].clientX
+    const touchY = e.touches[0].clientY
+    const deltaX = Math.abs(touchX - touchStartX.current)
+    const deltaY = Math.abs(touchY - touchStartY.current)
+    
+    // If moved more than 10px, cancel long press
+    if (deltaX > 10 || deltaY > 10) {
+      hasMoved.current = true
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+        longPressTimer.current = null
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isMobile) return
+    
+    const touchDuration = Date.now() - touchStartTime.current
+    
+    // Clear long press timer
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    
+    // If it was a short tap and didn't move, handle as click
+    if (touchDuration < 500 && !hasMoved.current && !isLongPressing) {
+      onEdit(item)
+    }
+    
+    // Reset long pressing state after a delay
+    setTimeout(() => {
+      setIsLongPressing(false)
+      onMobileDragEnd?.()
+    }, 100)
+  }
+
   const handleClick = (e: React.MouseEvent) => {
-    // Prevent opening modal when dragging
-    if (isDragging) return
+    // Only handle clicks on desktop or if not long pressing on mobile
+    if (isDragging || (isMobile && isLongPressing)) return
     onEdit(item)
   }
 
   return (
     <div
       ref={drag as any}
-      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-pointer hover:shadow-md ${isDragging ? 'dragging opacity-50 scale-95' : ''}`}
-      style={{ borderColor: borderHex }}
+      className={`vault-item bg-white rounded-lg shadow-sm border-2 p-3 mb-2 transition-all duration-200 cursor-pointer hover:shadow-md ${
+        isDragging ? 'dragging opacity-50 scale-95' : ''
+      } ${
+        isLongPressing ? 'scale-105 shadow-lg ring-2 ring-blue-300 animate-pulse' : ''
+      }`}
+      style={{ 
+        borderColor: borderHex,
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent'
+      }}
       onClick={handleClick}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="flex items-start space-x-3">
         <div className="flex-shrink-0">
@@ -148,9 +263,31 @@ function VaultItemCard({ item, onEdit }: VaultItemCardProps) {
   )
 }
 
-export default function VaultList({ items, onUpdate }: VaultListProps) {
+export default function VaultList({ items, onUpdate, onMobileDragStart, onMobileDragEnd }: VaultListProps) {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileDragItem, setMobileDragItem] = useState<VaultItem | null>(null)
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const handleMobileDragStart = (item: VaultItem) => {
+    setMobileDragItem(item)
+    onMobileDragStart?.(item)
+  }
+
+  const handleMobileDragEnd = () => {
+    setMobileDragItem(null)
+    onMobileDragEnd?.()
+  }
 
   const handleEdit = (item: VaultItem) => {
     setSelectedItem(item)
@@ -217,9 +354,16 @@ export default function VaultList({ items, onUpdate }: VaultListProps) {
         <h3 className="text-sm font-semibold text-gray-900 lg:block hidden">
           Activity Vault
         </h3>
-        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-          {items.length}
-        </span>
+        <div className="flex items-center gap-2">
+          {isMobile && items.length > 0 && (
+            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+              📱 Long press to drag
+            </span>
+          )}
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            {items.length}
+          </span>
+        </div>
       </div>
       
       {items.length === 0 ? (
@@ -230,9 +374,31 @@ export default function VaultList({ items, onUpdate }: VaultListProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
-            <VaultItemCard key={item.id} item={item} onEdit={handleEdit} />
-          ))}
+          {mobileDragItem ? (
+            // Show collapsed state with ghost item
+            <div className="relative">
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 text-center animate-pulse">
+                <div className="text-2xl mb-2">👻</div>
+                <p className="text-sm font-medium text-blue-800">
+                  {mobileDragItem.name}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Drag to calendar to add activity
+                </p>
+              </div>
+            </div>
+          ) : (
+            // Show normal vault items
+            items.map((item) => (
+              <VaultItemCard 
+                key={item.id} 
+                item={item} 
+                onEdit={handleEdit}
+                onMobileDragStart={handleMobileDragStart}
+                onMobileDragEnd={handleMobileDragEnd}
+              />
+            ))
+          )}
         </div>
       )}
 

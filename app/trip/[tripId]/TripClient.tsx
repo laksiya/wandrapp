@@ -7,8 +7,8 @@ import UploadButton from '@/components/UploadButton'
 import VaultList from '@/components/VaultList'
 import CalendarBoard from '@/components/CalendarBoard'
 import Header from '@/components/Header'
-import { useState, useEffect, useRef } from 'react'
-import { getVaultItems, getItineraryItems, getTrip } from './actions'
+import { useState, useEffect, useRef, useTransition } from 'react'
+import { getVaultItems, getItineraryItems, getTrip, addToItinerary } from './actions'
 
 interface TripClientProps {
   tripId: string
@@ -22,7 +22,11 @@ export default function TripClient({ tripId }: TripClientProps) {
   const [error, setError] = useState<string | null>(null)
   const [showVault, setShowVault] = useState(false)
   const [showTip, setShowTip] = useState(true)
+  const [mobileDragItem, setMobileDragItem] = useState<VaultItem | null>(null)
+  const [mobileDragPosition, setMobileDragPosition] = useState({ x: 0, y: 0 })
+  const [isMobileDragging, setIsMobileDragging] = useState(false)
   const tipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const loadData = async () => {
     try {
@@ -73,6 +77,50 @@ export default function TripClient({ tripId }: TripClientProps) {
       window.removeEventListener('mousedown', hideTip)
     }
   }, [showTip])
+
+  const handleMobileDragStart = (item: VaultItem) => {
+    setMobileDragItem(item)
+    setIsMobileDragging(true)
+    setShowVault(false) // Hide vault when starting drag
+  }
+
+  const handleMobileDragEnd = () => {
+    setMobileDragItem(null)
+    setIsMobileDragging(false)
+  }
+
+  const handleMobileDrop = (item: VaultItem, start: Date, end: Date) => {
+    startTransition(async () => {
+      try {
+        await addToItinerary(item.id, start.toISOString(), end.toISOString())
+        loadData()
+        setMobileDragItem(null)
+        setIsMobileDragging(false)
+      } catch (error) {
+        console.error('Failed to add to itinerary:', error)
+      }
+    })
+  }
+
+  // Handle mobile drag movement
+  const handleMobileDragMove = (e: TouchEvent) => {
+    if (!isMobileDragging) return
+    
+    const touch = e.touches[0]
+    setMobileDragPosition({ x: touch.clientX, y: touch.clientY })
+  }
+
+  // Add touch move listener when mobile dragging starts
+  useEffect(() => {
+    if (isMobileDragging) {
+      document.addEventListener('touchmove', handleMobileDragMove, { passive: true })
+      document.addEventListener('touchend', handleMobileDragEnd, { passive: true })
+      return () => {
+        document.removeEventListener('touchmove', handleMobileDragMove)
+        document.removeEventListener('touchend', handleMobileDragEnd)
+      }
+    }
+  }, [isMobileDragging])
 
   if (isLoading) {
     return (
@@ -134,7 +182,12 @@ export default function TripClient({ tripId }: TripClientProps) {
             {/* Vault List */}
             <div className="flex-1 overflow-hidden">
               <div className="h-full overflow-y-auto">
-                <VaultList items={vaultItems} onUpdate={loadData} />
+                <VaultList 
+                  items={vaultItems} 
+                  onUpdate={loadData}
+                  onMobileDragStart={handleMobileDragStart}
+                  onMobileDragEnd={handleMobileDragEnd}
+                />
               </div>
             </div>
           </div>
@@ -148,6 +201,8 @@ export default function TripClient({ tripId }: TripClientProps) {
                 tripStartDate={trip?.start_date}
                 tripEndDate={trip?.end_date}
                 onUpdate={loadData}
+                mobileDragItem={mobileDragItem}
+                onMobileDrop={handleMobileDrop}
               />
             </div>
           </div>
@@ -163,6 +218,8 @@ export default function TripClient({ tripId }: TripClientProps) {
               tripStartDate={trip?.start_date}
               tripEndDate={trip?.end_date}
               onUpdate={loadData}
+              mobileDragItem={mobileDragItem}
+              onMobileDrop={handleMobileDrop}
             />
           </div>
 
@@ -187,7 +244,12 @@ export default function TripClient({ tripId }: TripClientProps) {
                       tripId={tripId} 
                       onUploadComplete={loadData}
                     />
-                    <VaultList items={vaultItems} onUpdate={loadData} />
+                    <VaultList 
+                      items={vaultItems} 
+                      onUpdate={loadData}
+                      onMobileDragStart={handleMobileDragStart}
+                      onMobileDragEnd={handleMobileDragEnd}
+                    />
                   </div>
                 </div>
               </div>
@@ -209,7 +271,30 @@ export default function TripClient({ tripId }: TripClientProps) {
           {/* Mobile Instructions */}
           {showTip && (
             <div className="fixed bottom-20 left-4 right-4 bg-primary-500 text-white p-3 rounded-lg text-sm text-center z-20 lg:hidden transition-opacity duration-500">
-              💡 Tap the + button to add activities to your vault
+              💡 Tap the + button to add activities • Long press vault items to drag to calendar
+            </div>
+          )}
+
+          {/* Mobile Drag Ghost Item */}
+          {mobileDragItem && isMobileDragging && (
+            <div className="fixed inset-0 pointer-events-none z-50 lg:hidden">
+              <div 
+                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                style={{ 
+                  left: mobileDragPosition.x, 
+                  top: mobileDragPosition.y 
+                }}
+              >
+                <div className="bg-blue-500 text-white px-4 py-3 rounded-lg shadow-lg max-w-xs opacity-90">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">👻</div>
+                    <div>
+                      <p className="font-medium text-sm">{mobileDragItem.name}</p>
+                      <p className="text-xs opacity-90">Drop on calendar to add</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
