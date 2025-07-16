@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { uploadScreenshot, createVaultItem } from '@/app/trip/[tripId]/actions'
 import { VALID_ACTIVITY_TYPES, ActivityType } from '@/lib/activityTypes'
 
@@ -16,6 +16,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
   const [isDragOver, setIsDragOver] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   
   // Form state for manual event creation
   const [formData, setFormData] = useState({
@@ -26,6 +27,58 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
     startTime: '',
     endTime: ''
   })
+
+  // Function to resize image using canvas
+  const resizeImage = (file: File, maxWidth: number = 1920, maxHeight: number = 1080, quality: number = 0.8): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let { width, height } = img
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+        
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height
+          height = maxHeight
+        }
+        
+        // Set canvas dimensions
+        canvas.width = width
+        canvas.height = height
+        
+        // Draw resized image
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        // Convert to blob
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              // Create new file with resized image
+              const resizedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              })
+              resolve(resizedFile)
+            } else {
+              reject(new Error('Failed to resize image'))
+            }
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+      
+      img.onerror = () => reject(new Error('Failed to load image'))
+      img.src = URL.createObjectURL(file)
+    })
+  }
 
   const handleFileUpload = async (file: File) => {
     // Detect HEIC/HEIF files (iPhone screenshots)
@@ -46,8 +99,32 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
       return
     }
 
+    // Check file size and resize if needed
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    let processedFile = file
+    
+    if (file.size > maxSize) {
+      try {
+        // Show processing message
+        setErrorMessage('📏 Resizing large image for better performance...')
+        
+        // Resize image to reasonable dimensions (smaller for mobile)
+        const maxWidth = isMobile ? 1200 : 1920
+        const maxHeight = isMobile ? 800 : 1080
+        const quality = isMobile ? 0.7 : 0.8
+        processedFile = await resizeImage(file, maxWidth, maxHeight, quality)
+        
+        // Show success message briefly
+        setErrorMessage('✅ Image resized successfully!')
+        setTimeout(() => setErrorMessage(null), 2000)
+      } catch (error) {
+        setErrorMessage('Failed to resize image. Please try with a smaller image.')
+        return
+      }
+    }
+
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', processedFile)
     formData.append('tripId', tripId)
 
     startTransition(async () => {
@@ -126,7 +203,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
     })
   }
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
       const file = files[0]
@@ -134,7 +211,32 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
         alert('Please select an image file')
         return
       }
-      setFormData({ ...formData, imageFile: file })
+
+      // Check file size and resize if needed
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      let processedFile = file
+      
+      if (file.size > maxSize) {
+        try {
+          // Show processing message
+          setErrorMessage('📏 Resizing large image for better performance...')
+          
+          // Resize image to reasonable dimensions (smaller for mobile)
+          const maxWidth = isMobile ? 1200 : 1920
+          const maxHeight = isMobile ? 800 : 1080
+          const quality = isMobile ? 0.7 : 0.8
+          processedFile = await resizeImage(file, maxWidth, maxHeight, quality)
+          
+          // Show success message briefly
+          setErrorMessage('✅ Image resized successfully!')
+          setTimeout(() => setErrorMessage(null), 2000)
+        } catch (error) {
+          setErrorMessage('Failed to resize image. Please try with a smaller image.')
+          return
+        }
+      }
+
+      setFormData({ ...formData, imageFile: processedFile })
     }
   }
 
@@ -154,6 +256,16 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
       handleFileUpload(files[0])
     }
   }
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const resetToSelect = () => {
     setMode('select')
@@ -215,10 +327,16 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
           <input
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={handleFileInput}
             className="hidden"
             id="file-upload"
             disabled={isPending}
+            style={{ 
+              position: 'absolute',
+              opacity: 0,
+              pointerEvents: 'none'
+            }}
           />
           
           <div className="space-y-3">
@@ -236,15 +354,27 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
                 Upload Screenshot
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                Drop an image here or click to browse
+                {isMobile ? 'Tap to take a photo or choose from your gallery' : 'Drop an image here or click to browse'}
               </p>
+              <p className="text-xs text-green-600 mb-3">
+                ✨ Large images will be automatically resized for better performance
+              </p>
+              {isMobile && (
+                <p className="text-xs text-blue-600 mb-3">
+                  💡 Tip: If nothing happens, try tapping the button again or check your browser permissions
+                </p>
+              )}
               <label
                 htmlFor="file-upload"
                 className={`inline-flex items-center px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer transition-colors text-sm ${
                   isPending ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
+                style={{ 
+                  minHeight: '44px', // iOS minimum touch target
+                  WebkitTapHighlightColor: 'transparent'
+                }}
               >
-                {isPending ? 'Processing...' : 'Choose File'}
+                {isPending ? 'Processing...' : '📸 Take Photo or Choose File'}
               </label>
             </div>
           </div>
@@ -324,14 +454,27 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
                   type="file"
                   id="event-image"
                   accept="image/*"
+                  capture="environment"
                   onChange={handleImageFileChange}
                   className="hidden"
+                  style={{ 
+                    position: 'absolute',
+                    opacity: 0,
+                    pointerEvents: 'none'
+                  }}
                 />
                 <label
                   htmlFor="event-image"
                   className="flex-1 px-2 py-1 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-center text-xs"
+                  style={{ 
+                    minHeight: '44px', // iOS minimum touch target
+                    WebkitTapHighlightColor: 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
                 >
-                  {formData.imageFile ? formData.imageFile.name.substring(0, 15) + '...' : 'Choose image'}
+                  {formData.imageFile ? formData.imageFile.name.substring(0, 15) + '...' : '📸 Choose image'}
                 </label>
                 {formData.imageFile && (
                   <button
