@@ -22,7 +22,9 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
     name: '',
     description: '',
     activityType: 'Other' as ActivityType,
-    imageFile: null as File | null
+    imageFile: null as File | null,
+    startTime: '',
+    endTime: ''
   })
 
   const handleFileUpload = async (file: File) => {
@@ -68,6 +70,17 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
       return
     }
 
+    // Validate time fields if provided
+    if (formData.startTime && formData.endTime) {
+      const startTime = new Date(formData.startTime)
+      const endTime = new Date(formData.endTime)
+      
+      if (startTime >= endTime) {
+        alert('End time must be after start time')
+        return
+      }
+    }
+
     startTransition(async () => {
       try {
         if (formData.imageFile) {
@@ -83,13 +96,29 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
           
           await uploadScreenshot(uploadFormData)
         } else {
-          // If no image, create vault item without image
-          await createVaultItem(tripId, formData.name, formData.description, formData.activityType)
+          // If no image, create vault item with or without time
+          if (formData.startTime && formData.endTime) {
+            const response = await fetch(`/api/trip/${tripId}/vault/with-time`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: formData.name,
+                description: formData.description,
+                activityType: formData.activityType,
+                startTime: formData.startTime,
+                endTime: formData.endTime
+              })
+            })
+            
+            if (!response.ok) throw new Error('Failed to create event with time')
+          } else {
+            await createVaultItem(tripId, formData.name, formData.description, formData.activityType)
+          }
         }
         
         onUploadComplete?.()
         setMode('select')
-        setFormData({ name: '', description: '', activityType: 'Other', imageFile: null })
+        setFormData({ name: '', description: '', activityType: 'Other', imageFile: null, startTime: '', endTime: '' })
       } catch (error) {
         console.error('Failed to create event:', error)
         alert('Failed to create event. Please try again.')
@@ -128,7 +157,7 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
 
   const resetToSelect = () => {
     setMode('select')
-    setFormData({ name: '', description: '', activityType: 'Other', imageFile: null })
+    setFormData({ name: '', description: '', activityType: 'Other', imageFile: null, startTime: '', endTime: '' })
   }
 
   if (mode === 'select') {
@@ -314,6 +343,41 @@ export default function UploadButton({ tripId, onUploadComplete }: UploadButtonP
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Event Time (Optional)
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="start-time" className="block text-xs text-gray-600 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="start-time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="end-time" className="block text-xs text-gray-600 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="end-time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent text-xs"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                Leave empty to add to vault only, or set both times to add to calendar
+              </p>
             </div>
             
             <button

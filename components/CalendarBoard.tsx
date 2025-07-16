@@ -215,7 +215,7 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
     }
   }
 
-  const handleSave = async (data: { name: string; description: string; activityType: any }, saveToAll: boolean) => {
+  const handleSave = async (data: { name: string; description: string; activityType: any; startTime?: string; endTime?: string }, saveToAll: boolean) => {
     if (!selectedVaultItem) return
 
     try {
@@ -254,6 +254,11 @@ export default function CalendarBoard({ tripId, itineraryItems, tripStartDate, t
           
           if (!updateResponse.ok) throw new Error('Failed to update itinerary item reference')
         }
+      }
+
+      // Update time if provided and editing an itinerary item
+      if (selectedItineraryItem && data.startTime && data.endTime) {
+        await moveItinerary(selectedItineraryItem.id, data.startTime, data.endTime)
       }
       
       onUpdate?.()

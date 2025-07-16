@@ -311,17 +311,44 @@ export async function getImageFromGCS(imageUrl: string): Promise<string | null> 
 
 export async function createVaultItem(tripId: string, name: string, description: string, activityType: string) {
   try {
-    await sql`
+    const result = await sql`
       INSERT INTO vault_items (trip_id, name, description, activity_type)
       VALUES (${tripId}, ${name}, ${description}, ${activityType})
+      RETURNING id
     `
 
     revalidatePath(`/trip/${tripId}`)
     
-    return { success: true }
+    return { success: true, vaultItemId: result[0].id }
   } catch (error) {
     console.error('Failed to create vault item:', error)
     throw new Error('Failed to create vault item')
+  }
+}
+
+export async function createVaultItemWithTime(tripId: string, name: string, description: string, activityType: string, startTime: string, endTime: string) {
+  try {
+    // Create the vault item first
+    const vaultResult = await sql`
+      INSERT INTO vault_items (trip_id, name, description, activity_type)
+      VALUES (${tripId}, ${name}, ${description}, ${activityType})
+      RETURNING id
+    `
+
+    const vaultItemId = vaultResult[0].id
+
+    // Add to itinerary
+    await sql`
+      INSERT INTO itinerary_items (trip_id, vault_item_id, start_time, end_time)
+      VALUES (${tripId}, ${vaultItemId}, ${startTime}, ${endTime})
+    `
+
+    revalidatePath(`/trip/${tripId}`)
+    
+    return { success: true, vaultItemId }
+  } catch (error) {
+    console.error('Failed to create vault item with time:', error)
+    throw new Error('Failed to create vault item with time')
   }
 }
 

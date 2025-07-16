@@ -11,6 +11,8 @@
   "dependencies": {
     "@google-cloud/storage": "^7.7.0",
     "@neondatabase/serverless": "^0.9.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dnd-core": "^16.0.1",
     "formidable": "^3.5.1",
     "moment": "^2.29.4",

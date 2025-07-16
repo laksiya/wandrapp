@@ -11,7 +11,7 @@ interface ActivityEditModalProps {
   onClose: () => void
   vaultItem: VaultItem | null
   itineraryItem?: ItineraryItem | null
-  onSave: (data: { name: string; description: string; activityType: ActivityType }, saveToAll: boolean) => Promise<void>
+  onSave: (data: { name: string; description: string; activityType: ActivityType; startTime?: string; endTime?: string }, saveToAll: boolean) => Promise<void>
   onDelete?: (type: 'vault' | 'itinerary') => Promise<void>
 }
 
@@ -26,12 +26,16 @@ export default function ActivityEditModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    activityType: 'Other' as ActivityType
+    activityType: 'Other' as ActivityType,
+    startTime: '',
+    endTime: ''
   })
   const [originalData, setOriginalData] = useState({
     name: '',
     description: '',
-    activityType: 'Other' as ActivityType
+    activityType: 'Other' as ActivityType,
+    startTime: '',
+    endTime: ''
   })
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -45,12 +49,14 @@ export default function ActivityEditModal({
       const initialData = {
         name: vaultItem.name,
         description: vaultItem.description || '',
-        activityType: validateActivityType(vaultItem.activity_type || 'Other')
+        activityType: validateActivityType(vaultItem.activity_type || 'Other'),
+        startTime: itineraryItem ? new Date(itineraryItem.start_time).toISOString().slice(0, 16) : '',
+        endTime: itineraryItem ? new Date(itineraryItem.end_time).toISOString().slice(0, 16) : ''
       }
       setFormData(initialData)
       setOriginalData(initialData)
     }
-  }, [isOpen, vaultItem])
+  }, [isOpen, vaultItem, itineraryItem])
 
   // Load image when modal opens
   useEffect(() => {
@@ -89,12 +95,30 @@ export default function ActivityEditModal({
   const hasChanges = 
     formData.name !== originalData.name ||
     formData.description !== originalData.description ||
-    formData.activityType !== originalData.activityType
+    formData.activityType !== originalData.activityType ||
+    formData.startTime !== originalData.startTime ||
+    formData.endTime !== originalData.endTime
 
   const handleSave = async (saveToAll: boolean) => {
     if (!formData.name.trim()) {
       alert('Please enter an activity name')
       return
+    }
+
+    // Validate time fields if editing an itinerary item
+    if (itineraryItem) {
+      if (!formData.startTime || !formData.endTime) {
+        alert('Please set both start and end times')
+        return
+      }
+      
+      const startTime = new Date(formData.startTime)
+      const endTime = new Date(formData.endTime)
+      
+      if (startTime >= endTime) {
+        alert('End time must be after start time')
+        return
+      }
     }
 
     // Don't save if no changes
@@ -259,6 +283,41 @@ export default function ActivityEditModal({
                   <option value="Other">Other</option>
                 </select>
               </div>
+
+              {/* Time fields - only show when editing an itinerary item */}
+              {itineraryItem && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-700">Event Time</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="startTime" className="block text-xs font-medium text-gray-600 mb-1">
+                        Start Time *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="startTime"
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="endTime" className="block text-xs font-medium text-gray-600 mb-1">
+                        End Time *
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="endTime"
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </form>
         </div>
